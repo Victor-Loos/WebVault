@@ -1,0 +1,32 @@
+# browsertrix-crawler config example
+# Copy to crawl-config.yaml and customize
+
+seeds:
+  - https://example.com/
+
+# Collection name (will create folder in crawls/)
+collection: my-archive
+
+# Number of parallel workers
+workers: 1
+
+# Generate WACZ file for archiving
+generateWACZ: true
+
+# Generate CDX index for searching
+generateCDX: true
+
+# Combine WARCs into single file
+combineWARC: true
+
+# Crawl depth
+depth: 1
+
+# Wait until page is loaded
+waitUntil: domcontentloaded
+
+# Browser headless mode
+headless: true
+
+# Output to S3 (Garage)
+# The crawler writes to local dir, orchestrator handles upload

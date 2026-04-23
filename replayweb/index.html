@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>WebVault Replay</title>
+    <script src="ui.js"></script>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #f6f2e9;
+        }
+        replay-web-page {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <replay-web-page id="replay" replaybase="/wb/" swName="sw.js" embed="default"></replay-web-page>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const source = params.get("source");
+        if (source) {
+            document.getElementById("replay").setAttribute("source", source);
+        }
+    </script>
+</body>
+</html>

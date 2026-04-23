@@ -1,0 +1,25 @@
+# Garage S3 Configuration for WebVault
+# Copy this to garage.toml and run setup.sh to generate secrets
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+
+db_engine = "lmdb"
+
+replication_mode = "none"
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "localhost:3901"
+rpc_secret = "REPLACEME_BY_SETUP"
+
+admin_api_bind_addr = "[::]:3903"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage"
+
+[s3_web]
+bind_addr = "[::]:3902"
+root_domain = ".web.garage"
+index = "index.html"

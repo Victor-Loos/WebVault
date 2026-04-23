@@ -1,0 +1,70 @@
+services:
+  garage:
+    image: dxflrs/garage:v1.3.1
+    container_name: webvault-garage
+    restart: unless-stopped
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage_data:/var/lib/garage/data
+      - garage_meta:/var/lib/garage/meta
+    ports:
+      - "3900:3900"
+      - "3901:3901"
+      - "3903:3903"
+      - "3902:3902"
+    networks:
+      - webvault
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  crawler:
+    image: docker.io/webrecorder/browsertrix-crawler:latest
+    container_name: webvault-crawler
+    restart: unless-stopped
+    volumes:
+      - ./crawls:/crawls/
+    environment:
+      - CRAWL_ID=${CRAWL_ID:-}
+    networks:
+      - webvault
+    entrypoint: /bin/sh -c
+    command:
+      - "sleep infinity"
+
+  orchestrator:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    container_name: webvault-orchestrator
+    restart: unless-stopped
+    ports:
+      - "8008:8080"
+    environment:
+      - GARAGE_ENDPOINT=http://garage:3900
+      - GARAGE_BUCKET=${GARAGE_BUCKET:-archives}
+      - CRAWL_OUTPUT_DIR=/crawls
+      - CRAWLER_CONTAINER_NAME=webvault-crawler
+    volumes:
+      - ./crawls:/crawls
+      - ./replayweb:/replayweb:ro
+      - ./.env:/app/.env
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      garage:
+        condition: service_healthy
+      crawler:
+        condition: service_started
+    networks:
+      - webvault
+
+networks:
+  webvault:
+    driver: bridge
+
+volumes:
+  garage_data:
+  garage_meta:
