@@ -432,7 +432,7 @@ def get_collection_payloads() -> list[dict[str, Any]]:
         latest = files[0] if files else {}
         collections.append({
             "name": coll["name"],
-            "title": latest.get("title", "") or friendly_title(coll["name"]),
+            "title": friendly_title(coll["name"]),
             "label": coll["label"],
             "file_count": len(files),
             "total_size": format_bytes(coll["total_size"]),
@@ -812,6 +812,76 @@ def render_layout(title: str, body: str, extra_head: str = "", extra_script: str
             text-align: center;
             border: 1px dashed rgba(69, 52, 37, 0.14);
         }}
+        .modal {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }}
+        .modal-content {{
+            background: var(--panel-strong);
+            border-radius: 20px;
+            padding: 24px;
+            min-width: 400px;
+            max-width: 500px;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+            color: var(--text);
+        }}
+        .modal-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }}
+        .modal-header h3 {{
+            margin: 0;
+            font-size: 1.2rem;
+        }}
+        .modal-close {{
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--muted);
+        }}
+        .modal-close:hover {{
+            color: var(--text);
+        }}
+        .modal-filename {{
+            background: var(--line);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            word-break: break-all;
+            margin-bottom: 20px;
+        }}
+        .form-group {{
+            margin-bottom: 20px;
+        }}
+        .form-group label {{
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }}
+        .form-group input {{
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid rgba(69,52,37,0.2);
+            border-radius: 10px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }}
+        .modal-footer {{
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }}
         .inline-link {{
             color: var(--accent-strong);
             text-decoration: none;
@@ -1053,6 +1123,28 @@ def render_home_page() -> HTMLResponse:
                 <div class="empty">Loading collections…</div>
             </div>
         </section>
+
+        <div id="modifyModal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Modify File</h3>
+                    <button class="modal-close" onclick="closeModifyModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-filename" id="modalFilename"></p>
+                    <div class="form-group">
+                        <label for="newCollection">Move to collection:</label>
+                        <input type="text" id="newCollection" list="collectionList" placeholder="Enter collection name">
+                        <datalist id="collectionList"></datalist>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="button" onclick="moveFile()">Move</button>
+                    <button class="button" onclick="deleteFile()" style="color:#991b1b;">Delete</button>
+                    <button class="button" onclick="closeModifyModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
     </div>
     """
 
@@ -1235,7 +1327,7 @@ def render_home_page() -> HTMLResponse:
             panel.innerHTML = list.map((c) => `
                 <article class="archive-item">
                     <strong>${escapeHtml(c.title || c.name)}</strong>
-                    <div class="meta">${escapeHtml(c.name)}</div>
+                    <div class="meta">${c.file_count} file${c.file_count !== 1 ? 's' : ''}</div>
                     <div class="action-row">
                         <button class="button" onclick="renameCollection('${escapeHtml(c.name)}')">Rename</button>
                         <button class="button" onclick="deleteCollection('${escapeHtml(c.name)}')" style="color: #991b1b;">Delete</button>
@@ -1349,6 +1441,82 @@ def render_home_page() -> HTMLResponse:
                 : "Suggested name will appear here once you add a seed.";
         });
 
+        let currentFileCollection = "";
+        let currentFileName = "";
+
+        function showModifyModal(collection, filename) {
+            currentFileCollection = collection;
+            currentFileName = filename;
+            document.getElementById("modalFilename").textContent = currentFileCollection + "/" + currentFileName;
+            document.getElementById("newCollection").value = currentFileCollection;
+            document.getElementById("modifyModal").style.display = "flex";
+            loadCollectionsForModal();
+        }
+
+        function closeModifyModal() {
+            document.getElementById("modifyModal").style.display = "none";
+        }
+
+        async function loadCollectionsForModal() {
+            try {
+                const res = await fetch("/api/collections");
+                const data = await res.json();
+                const datalist = document.getElementById("collectionList");
+                datalist.innerHTML = (data.collections || []).map(c =>
+                    `<option value="${escapeHtml(c.name)}">`).join("");
+            } catch (e) {
+                console.warn("Could not load collections:", e.message);
+            }
+        }
+
+        async function moveFile() {
+            const newCollection = document.getElementById("newCollection").value.trim();
+            if (!newCollection) {
+                alert("Please enter a collection name.");
+                return;
+            }
+            if (newCollection === currentFileCollection) {
+                closeModifyModal();
+                return;
+            }
+            try {
+                const res = await fetch("/api/files/" + encodeURIComponent(currentFileCollection) + "/" + encodeURIComponent(currentFileName), {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ collection: newCollection })
+                });
+                const result = await res.json();
+                if (result.error) {
+                    alert(result.error);
+                } else {
+                    alert("Moved to '" + result.to + "'");
+                    closeModifyModal();
+                    window.location.reload();
+                }
+            } catch (e) {
+                alert("Failed: " + e.message);
+            }
+        }
+
+        async function deleteFile() {
+            if (!confirm("Delete '" + currentFileName + "'? This cannot be undone.")) return;
+            try {
+                const res = await fetch("/api/files/" + encodeURIComponent(currentFileCollection) + "/" + encodeURIComponent(currentFileName), {
+                    method: "DELETE"
+                });
+                const result = await res.json();
+                if (result.error) {
+                    alert(result.error);
+                } else {
+                    alert("Deleted '" + result.file + "'");
+                    closeModifyModal();
+                    window.location.reload();
+                }
+            } catch (e) {
+                alert("Failed: " + e.message);
+            }
+        }
+
         loadCollectionsList();
         loadArchives();
         loadJobs();
@@ -1361,20 +1529,13 @@ def render_home_page() -> HTMLResponse:
 
 
 def render_collection_page(collection: str, files: list[dict[str, Any]]) -> HTMLResponse:
-    collection_title = files[0]["title"] if files else friendly_title(collection)
+    collection_title = friendly_title(collection)
     body = f"""
     <div class="shell">
         <div class="topbar">
             <a class="brand" href="/">
                 <img class="brand-mark" src="/img/webvault.svg" alt="WebVault logo" aria-hidden="true">
-                <span class="brand-copy">
-                    <strong>{escape(collection_title)}</strong>
-                    <span>{escape(friendly_title(collection))}</span>
-                </span>
             </a>
-            <div class="nav">
-                <a class="nav-link" href="/">Back home</a>
-            </div>
         </div>
         <section class="hero">
             <h1>{escape(collection_title)}</h1>
@@ -1395,6 +1556,7 @@ def render_collection_page(collection: str, files: list[dict[str, Any]]) -> HTML
                         <div class="action-row">
                             <a class="button primary" href="/replay/{quote(collection)}/{quote(file["name"])}">Replay</a>
                             <a class="button" href="/download/{quote(collection)}/{quote(file["name"])}">Download</a>
+                            <button class="button" onclick="showModifyModal('{escape(collection)}', '{escape(file["name"])}')">Modify</button>
                         </div>
                     </article>
                     '''
@@ -1402,7 +1564,106 @@ def render_collection_page(collection: str, files: list[dict[str, Any]]) -> HTML
                 ) or '<div class="empty">No WACZ files were found in this collection.</div>'}
             </div>
         </section>
+
+        <div id="modifyModal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Modify File</h3>
+                    <button class="modal-close" onclick="closeModifyModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-filename" id="modalFilename"></p>
+                    <div class="form-group">
+                        <label for="newCollection">Move to collection:</label>
+                        <input type="text" id="newCollection" list="collectionList" placeholder="Enter collection name">
+                        <datalist id="collectionList"></datalist>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="button" onclick="moveFile()">Move</button>
+                    <button class="button" onclick="deleteFile()" style="color:#991b1b;">Delete</button>
+                    <button class="button" onclick="closeModifyModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
     </div>
+    <script>
+        let currentFileCollection = "";
+        let currentFileName = "";
+
+        function showModifyModal(collection, filename) {{
+            currentFileCollection = collection;
+            currentFileName = filename;
+            document.getElementById("modalFilename").textContent = currentFileCollection + "/" + currentFileName;
+            document.getElementById("newCollection").value = currentFileCollection;
+            document.getElementById("modifyModal").style.display = "flex";
+            loadCollectionsForModal();
+        }}
+
+        function closeModifyModal() {{
+            document.getElementById("modifyModal").style.display = "none";
+        }}
+
+        async function loadCollectionsForModal() {{
+            try {{
+                const res = await fetch("/api/collections");
+                const data = await res.json();
+                const datalist = document.getElementById("collectionList");
+                datalist.innerHTML = (data.collections || []).map(c =>
+                    `<option value="${{encodeURIComponent(c.name)}}">`).join("");
+            }} catch (e) {{
+                console.warn("Could not load collections:", e.message);
+            }}
+        }}
+
+        async function moveFile() {{
+            const newCollection = document.getElementById("newCollection").value.trim();
+            if (!newCollection) {{
+                alert("Please enter a collection name.");
+                return;
+            }}
+            if (newCollection === currentFileCollection) {{
+                closeModifyModal();
+                return;
+            }}
+            try {{
+                const res = await fetch("/api/files/" + encodeURIComponent(currentFileCollection) + "/" + encodeURIComponent(currentFileName), {{
+                    method: "POST",
+                    headers: {{ "Content-Type": "application/json" }},
+                    body: JSON.stringify({{ collection: newCollection }})
+                }});
+                const result = await res.json();
+                if (result.error) {{
+                    alert(result.error);
+                }} else {{
+                    alert("Moved to '" + result.to + "'");
+                    closeModifyModal();
+                    window.location.reload();
+                }}
+            }} catch (e) {{
+                alert("Failed: " + e.message);
+            }}
+        }}
+
+        async function deleteFile() {{
+            if (!confirm("Delete '" + currentFileName + "'? This cannot be undone.")) return;
+            try {{
+                const res = await fetch("/api/files/" + encodeURIComponent(currentFileCollection) + "/" + encodeURIComponent(currentFileName), {{
+                    method: "DELETE"
+                }});
+                const result = await res.json();
+                if (result.error) {{
+                    alert(result.error);
+                }} else {{
+                    alert("Deleted '" + result.file + "'");
+                    closeModifyModal();
+                    window.location.reload();
+                }}
+            }} catch (e) {{
+                alert("Failed: " + e.message);
+            }}
+        }}
+    </script>
     """
     return render_layout(f"{collection_title} · WebVault", body)
 
@@ -1705,7 +1966,7 @@ async def list_jobs() -> dict[str, Any]:
 async def list_collections_api() -> dict[str, Any]:
     try:
         collections = get_collection_payloads()
-        return {"collections": [{"name": c["name"], "title": c["title"]} for c in collections]}
+        return {"collections": [{"name": c["name"], "title": c["title"], "file_count": c["file_count"]} for c in collections]}
     except Exception as exc:
         logger.exception("Failed to list collections")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -1754,6 +2015,44 @@ async def delete_collection(name: str) -> dict[str, Any]:
 
     logger.info("Collection deleted: %s (%d files)", name, len(to_delete))
     return {"deleted": len(to_delete), "message": f"Deleted {len(to_delete)} files from '{name}'"}
+
+
+@app.post("/api/files/{collection}/{filename}")
+async def move_file(collection: str, filename: str, request: Request) -> dict[str, Any]:
+    try:
+        body = await request.json()
+    except Exception:
+        return {"error": "Invalid JSON body"}
+    new_collection = slugify((body or {}).get("collection", ""))
+    if not new_collection:
+        return {"error": "New collection name is required"}
+
+    s3 = get_s3_client()
+    old_key = f"{collection}/{filename}"
+    new_key = f"{new_collection}/{filename}"
+
+    try:
+        s3.copy_object(Bucket=GARAGE_BUCKET, Key=new_key, CopySource={"Bucket": GARAGE_BUCKET, "Key": old_key})
+        s3.delete_object(Bucket=GARAGE_BUCKET, Key=old_key)
+        logger.info("Moved file %s → %s", old_key, new_key)
+        return {"moved": True, "from": collection, "to": new_collection, "file": filename}
+    except Exception as exc:
+        logger.exception("Failed to move file")
+        return {"error": str(exc)}
+
+
+@app.delete("/api/files/{collection}/{filename}")
+async def delete_file(collection: str, filename: str) -> dict[str, Any]:
+    s3 = get_s3_client()
+    key = f"{collection}/{filename}"
+
+    try:
+        s3.delete_object(Bucket=GARAGE_BUCKET, Key=key)
+        logger.info("Deleted file %s", key)
+        return {"deleted": True, "file": filename}
+    except Exception as exc:
+        logger.exception("Failed to delete file")
+        return {"error": str(exc)}
 
 
 @app.get("/archive/{collection}", response_class=HTMLResponse)
