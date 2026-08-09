@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="app-shell live-page-shell">
+    <header class="site-header compact-site-header">
+        <a class="wordmark" href="/#capture" aria-label="WebVault capture home"><span class="wordmark-icon"><img src="/img/icon.svg" alt=""></span><span><strong>WebVault</strong><small>Live capture</small></span></a>
+        <nav class="page-nav" aria-label="Live capture navigation"><a class="button button-quiet" id="liveInfoLink" href="/#capture">Capture information</a><a class="button button-secondary" href="/#capture">Back to capture</a></nav>
+    </header>
+    <main id="main-content" class="live-workspace">
+        <header class="live-page-heading"><div><p class="eyebrow">Running crawl</p><h1>Watch the archive take shape</h1><p>Browser frames and crawl processing update independently. A page can be recorded even when its final frame is brief.</p></div><span class="status-badge is-active" id="liveStatus">Connecting</span></header>
+        <div class="live-dashboard">
+            <section class="live-view-card" aria-labelledby="browserViewHeading"><div class="live-card-heading"><div><p class="eyebrow">Browser view</p><h2 id="browserViewHeading">Current pages</h2></div><span>View only</span></div><iframe id="liveScreencast" src="/live/view/" title="Browsertrix live browser frames"></iframe></section>
+            <aside class="live-progress-card" aria-labelledby="liveProgressHeading">
+                <p class="eyebrow">Capture progress</p><h2 id="liveProgressHeading">Processing steps</h2>
+                <ol class="crawl-stage-list" id="crawlStages">
+                    <li data-stage="queued"><span></span><div><strong>Queued</strong><small>Waiting for an available worker</small></div></li>
+                    <li data-stage="running"><span></span><div><strong>Crawling</strong><small>Opening pages and recording responses</small></div></li>
+                    <li data-stage="uploading"><span></span><div><strong>Building archive</strong><small>Validating and uploading the WACZ</small></div></li>
+                    <li data-stage="completed"><span></span><div><strong>Complete</strong><small>Ready for replay and download</small></div></li>
+                </ol>
+                <div class="live-progress-meter"><div><strong id="liveProgressLabel">Waiting for crawl data…</strong><span id="liveProgressPercent">—</span></div><progress id="liveProgress" max="1" value="0"></progress></div>
+                <dl class="live-metrics"><div><dt>Captured</dt><dd id="liveCaptured">0</dd></div><div><dt>Pending</dt><dd id="livePending">0</dd></div><div><dt>Failed</dt><dd id="liveFailed">0</dd></div></dl>
+                <div class="live-current"><span>Current URL</span><strong id="liveCurrentUrl">Waiting for the first page…</strong></div>
+                <p class="inline-notice" id="liveMessage" role="status">Connecting to the crawl worker…</p>
+            </aside>
+        </div>
+    </main>
+    <footer class="site-footer"><span>WebVault</span><span>Live Browsertrix capture</span></footer>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="/static/live.js" defer></script>{% endblock %}

@@ -4,9 +4,33 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/.env"
 GARAGE_TOML="$SCRIPT_DIR/garage/garage.toml"
 
+create_webvault_password() {
+    openssl rand -base64 24 2>/dev/null | tr -d '\n' || true
+}
+
 if [ -f "$ENV_FILE" ] && grep -q "GARAGE_ACCESS_KEY=" "$ENV_FILE" && [ -f "$GARAGE_TOML" ] && ! grep -q "REPLACEME_BY_SETUP" "$GARAGE_TOML"; then
-    echo "Already set up — skipping."
-    echo "Run 'docker compose up -d' to start."
+    if ! grep -q '^WEBVAULT_USERNAME=' "$ENV_FILE" || ! grep -q '^WEBVAULT_PASSWORD=' "$ENV_FILE"; then
+        WEBVAULT_PASSWORD=$(create_webvault_password)
+        if [ -z "$WEBVAULT_PASSWORD" ]; then
+            echo "Error: Could not generate the WebVault password. Install openssl and retry."
+            exit 1
+        fi
+        {
+            echo "WEBVAULT_USERNAME=admin"
+            echo "WEBVAULT_PASSWORD=$WEBVAULT_PASSWORD"
+        } >> "$ENV_FILE"
+        chmod 600 "$ENV_FILE"
+        echo "Enabled authentication for this existing installation."
+        echo "WebVault login: admin"
+        echo "WebVault password: $WEBVAULT_PASSWORD"
+    else
+        echo "Existing credentials found."
+    fi
+    if ! grep -q '^GARAGE_CAPACITY=' "$ENV_FILE"; then
+        echo "GARAGE_CAPACITY=${GARAGE_CAPACITY:-100G}" >> "$ENV_FILE"
+    fi
+    "$SCRIPT_DIR/garage/resize.sh"
+    echo "Setup checks complete. Run 'docker compose up -d' to start."
     exit 0
 fi
 
@@ -66,9 +90,10 @@ echo "Node ID: $NODE_ID"
 LAYOUT=$(docker exec webvault-garage /garage layout show 2>/dev/null)
 if echo "$LAYOUT" | grep -qi "no nodes\|version: 0"; then
     echo "Setting up layout..."
-    docker exec webvault-garage /garage layout assign -z dc1 -c 1G "$NODE_ID" > /dev/null 2>&1
+    docker exec webvault-garage /garage layout assign -z dc1 -c "${GARAGE_CAPACITY:-100G}" "$NODE_ID" > /dev/null 2>&1
     sleep 2
     docker exec webvault-garage /garage layout apply --version 1 > /dev/null 2>&1
+    printf '%s\n' "${GARAGE_CAPACITY:-100G}" > "$SCRIPT_DIR/garage/.layout-capacity"
     sleep 2
 fi
 
@@ -109,12 +134,20 @@ echo "Granting bucket permissions..."
 docker exec webvault-garage /garage bucket allow --read --write --owner archives --key "$GARAGE_ACCESS_KEY" > /dev/null 2>&1
 
 RPC_SECRET=$(grep "^rpc_secret" "$GARAGE_TOML" | sed 's/.*= *//' | tr -d '" ')
+WEBVAULT_PASSWORD=$(create_webvault_password)
+if [ -z "$WEBVAULT_PASSWORD" ]; then
+    echo "Error: Could not generate the WebVault password. Install openssl and retry."
+    exit 1
+fi
 
 echo "Writing .env..."
 cat > "$ENV_FILE" <<EOF
 RPC_SECRET=$RPC_SECRET
 GARAGE_ACCESS_KEY=$GARAGE_ACCESS_KEY
 GARAGE_SECRET_KEY=$GARAGE_SECRET_KEY
+WEBVAULT_USERNAME=admin
+WEBVAULT_PASSWORD=$WEBVAULT_PASSWORD
+GARAGE_CAPACITY=${GARAGE_CAPACITY:-100G}
 EOF
 
 chmod 600 "$ENV_FILE"
@@ -124,4 +157,7 @@ docker compose stop garage > /dev/null 2>&1
 
 echo ""
 echo "Setup complete!"
+echo "WebVault login: admin"
+echo "WebVault password: $WEBVAULT_PASSWORD"
+echo "Store this password securely; it remains available in .env."
 echo "Run 'docker compose up -d' to start all services."

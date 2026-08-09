@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="app-shell">
+    <header class="site-header compact-site-header">
+        <a class="wordmark" href="/#capture" aria-label="WebVault capture home"><span class="wordmark-icon" aria-hidden="true"><img src="/img/icon.svg" alt=""></span><span><strong>WebVault</strong><small>Browser access</small></span></a>
+        <nav class="page-nav" aria-label="Login profile navigation"><a class="button button-quiet" href="/#capture">New capture</a><a class="button button-secondary" href="/#library">Library</a></nav>
+    </header>
+
+    <main id="main-content" class="profile-workspace">
+        <header class="profile-intro"><p class="eyebrow">Authenticated websites</p><h1>Browser login profiles</h1><p>Open a temporary, local-only browser session, sign in normally—including SSO or MFA—and save its cookies securely for later captures. WebVault never receives your password.</p></header>
+        <div class="profile-layout">
+            <section class="profile-create-card" aria-labelledby="profileCreateHeading">
+                <p class="eyebrow">New profile</p><h2 id="profileCreateHeading">Prepare authenticated access</h2>
+                <form id="profileForm">
+                    <div class="field-block"><label for="profileName">Profile name</label><input id="profileName" required maxlength="100" placeholder="Member portal"></div>
+                    <div class="field-block"><label for="profileUrl">Login page</label><input id="profileUrl" required maxlength="2048" placeholder="https://example.com/login" spellcheck="false"></div>
+                    <div class="profile-security-note"><strong>Profiles contain secrets</strong><p>Use a dedicated, least-privileged archive account. Saved profiles may contain session cookies and tokens.</p></div>
+                    <button class="button button-primary button-large" id="profileSubmit" type="submit">Start login session</button>
+                </form>
+                <div class="profile-session" id="profileSession" hidden>
+                    <p class="eyebrow">Interactive session</p><h3 id="profileSessionTitle">Waiting for the browser…</h3><p id="profileSessionMessage">The worker is preparing a local browser.</p>
+                    <a class="button button-primary" id="openProfileBrowser" href="http://127.0.0.1:9223/" target="_blank" rel="noopener">Open interactive browser</a>
+                    <button class="button button-danger-quiet" id="cancelProfile" type="button">Cancel setup</button>
+                    <p class="field-hint">After signing in, verify a protected page and click “Create Profile” in the browser window.</p>
+                </div>
+            </section>
+            <aside class="profile-list-card" aria-labelledby="profileListHeading"><p class="eyebrow">Saved access</p><h2 id="profileListHeading">Available profiles</h2><div id="profileList" class="profile-list"><div class="loading-line"></div></div></aside>
+        </div>
+    </main>
+    <footer class="site-footer"><span>WebVault</span><span>Profiles stay in a dedicated local volume</span></footer>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="/static/profiles.js" defer></script>{% endblock %}

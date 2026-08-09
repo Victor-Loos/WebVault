@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="app-shell">
+    <header class="site-header">
+        <a class="wordmark" href="/#capture" aria-label="WebVault capture home">
+            <span class="wordmark-icon" aria-hidden="true">
+                <img src="/img/icon.svg" alt="">
+            </span>
+            <span>
+                <strong>WebVault</strong>
+                <small>Private web archive</small>
+            </span>
+        </a>
+        <nav class="primary-nav" aria-label="Primary navigation" role="tablist">
+            <button class="nav-item is-active" type="button" role="tab" data-tab-target="capture" aria-controls="panel-capture" aria-selected="true">
+                Capture
+            </button>
+            <button class="nav-item" type="button" role="tab" data-tab-target="library" aria-controls="panel-library" aria-selected="false">
+                Library <span class="nav-count" id="navLibraryCount">0</span>
+            </button>
+            <button class="nav-item" type="button" role="tab" data-tab-target="settings" aria-controls="panel-settings" aria-selected="false">
+                Settings
+            </button>
+        </nav>
+        <div class="system-state" title="WebVault is connected">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>Ready</span>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <section class="studio-intro" id="captureIntro" aria-labelledby="studioTitle">
+            <div class="eyebrow">Your living record of the web</div>
+            <div class="intro-grid">
+                <div>
+                    <h1 id="studioTitle">Preserve what matters,<br><em>before it changes.</em></h1>
+                    <p>Capture complete, replayable websites into an archive you control. Every collection stays private, portable, and yours.</p>
+                </div>
+                <dl class="archive-overview" aria-label="Archive overview">
+                    <div>
+                        <dt>Collections</dt>
+                        <dd id="statCollections">—</dd>
+                    </div>
+                    <div>
+                        <dt>Captures</dt>
+                        <dd id="statFiles">—</dd>
+                    </div>
+                    <div>
+                        <dt>Recent jobs</dt>
+                        <dd id="statJobs">—</dd>
+                    </div>
+                </dl>
+            </div>
+        </section>
+
+        <section class="workspace-panel tab-panel" id="panel-capture" role="tabpanel" data-tab-panel="capture" aria-labelledby="captureHeading">
+            <div class="capture-layout">
+                <article class="capture-card">
+                    <div class="section-heading">
+                        <div>
+                            <span class="section-number">01</span>
+                            <p class="eyebrow">New capture</p>
+                            <h2 id="captureHeading">Choose where to begin</h2>
+                        </div>
+                        <span class="quiet-badge">WACZ format</span>
+                    </div>
+
+                    <div class="inline-notice" id="crawlStatus" role="status" hidden></div>
+                    <form id="crawlForm" novalidate>
+                        <div class="field-block field-featured">
+                            <label for="seeds">Website addresses</label>
+                            <textarea id="seeds" name="seeds" required placeholder="example.com&#10;example.com/journal" spellcheck="false"></textarea>
+                            <div class="field-footer">
+                                <span>One address per line. Domains automatically use HTTPS.</span>
+                                <span id="seedCount">0 addresses</span>
+                            </div>
+                            <p class="previous-capture-note" id="previousCaptureNote" role="status" hidden></p>
+                        </div>
+
+                        <div class="field-block">
+                            <label for="collection">Collection</label>
+                            <input id="collection" name="collection" type="text" list="collectionSuggestions" placeholder="Unsorted captures" autocomplete="off">
+                            <datalist id="collectionSuggestions"></datalist>
+                            <p class="field-hint" id="collectionHint">Leave blank to place this capture in “Not defined”.</p>
+                        </div>
+
+                        <div class="option-grid">
+                            <div class="field-block compact">
+                                <label for="scopeType">Capture scope</label>
+                                <select id="scopeType" name="scopeType">
+                                    <option value="prefix">This path</option>
+                                    <option value="host">Entire host</option>
+                                    <option value="domain">Entire domain</option>
+                                    <option value="page">Single page</option>
+                                    <option value="page-spa">Single-page app</option>
+                                    <option value="any">Follow anywhere</option>
+                                </select>
+                            </div>
+                            <div class="field-block compact">
+                                <label for="depth">Link depth</label>
+                                <select id="depth" name="depth">
+                                    <option value="0">Seed only</option>
+                                    <option value="1" selected>1 level</option>
+                                    <option value="2">2 levels</option>
+                                    <option value="3">3 levels</option>
+                                    <option value="4">4 levels</option>
+                                    <option value="5">5 levels</option>
+                                </select>
+                            </div>
+                            <div class="field-block compact">
+                                <label for="workers">Parallel tabs</label>
+                                <select id="workers" name="workers">
+                                    <option value="1" selected>1 tab</option>
+                                    <option value="2">2 tabs</option>
+                                    <option value="3">3 tabs</option>
+                                    <option value="4">4 tabs</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <details class="advanced-options">
+                            <summary>
+                                <span>Advanced options</span>
+                                <span class="summary-hint">Limits, page readiness, and browser behavior</span>
+                            </summary>
+                            <div class="advanced-body">
+                                <div class="option-grid">
+                                    <div class="field-block compact">
+                                        <label for="pageLimit">Page limit</label>
+                                        <input id="pageLimit" name="pageLimit" type="number" min="1" max="100000" value="1000" inputmode="numeric">
+                                        <p class="field-hint">Maximum 100,000 pages</p>
+                                    </div>
+                                    <div class="field-block compact">
+                                        <label for="timeLimit">Time limit</label>
+                                        <div class="input-suffix">
+                                            <input id="timeLimit" name="timeLimit" type="number" min="1" max="1440" value="60" inputmode="numeric">
+                                            <span>min</span>
+                                        </div>
+                                        <p class="field-hint">Maximum 24 hours</p>
+                                    </div>
+                                    <div class="field-block compact">
+                                        <label for="waitUntil">Page readiness</label>
+                                        <select id="waitUntil" name="waitUntil">
+                                            <option value="domcontentloaded">Content loaded</option>
+                                            <option value="load" selected>Page loaded</option>
+                                            <option value="networkidle0">Network quiet</option>
+                                            <option value="networkidle2">Mostly quiet</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="option-grid">
+                                    <div class="field-block compact">
+                                        <label for="includeRules">Include URL rules</label>
+                                        <textarea id="includeRules" name="includeRules" rows="4" placeholder="^https://example\\.com/docs/"></textarea>
+                                        <p class="field-hint">Optional regular expressions, one per line.</p>
+                                    </div>
+                                    <div class="field-block compact">
+                                        <label for="excludeRules">Exclude URL rules</label>
+                                        <textarea id="excludeRules" name="excludeRules" rows="4" placeholder="/logout$&#10;/calendar/"></textarea>
+                                        <p class="field-hint">Matching discovered URLs will not be captured.</p>
+                                    </div>
+                                </div>
+                                <div class="option-grid">
+                                    <div class="field-block compact">
+                                        <label for="scheduleInterval">Repeat capture</label>
+                                        <select id="scheduleInterval" name="scheduleInterval">
+                                            <option value="none">Do not repeat</option>
+                                            <option value="daily">Daily</option>
+                                            <option value="weekly">Weekly</option>
+                                            <option value="monthly">Every 30 days</option>
+                                        </select>
+                                    </div>
+                                    <div class="field-block compact">
+                                        <label for="retentionCount">Scheduled versions to keep</label>
+                                        <input id="retentionCount" name="retentionCount" type="number" min="0" max="1000" value="0" inputmode="numeric">
+                                        <p class="field-hint">0 keeps every version.</p>
+                                    </div>
+                                </div>
+                                <div class="field-block profile-field">
+                                    <label for="profileId">Browser login profile</label>
+                                    <div class="profile-picker"><select id="profileId" name="profileId"><option value="">No saved login</option></select><a class="button button-secondary" href="/profiles">Create or manage profiles</a></div>
+                                    <p class="field-hint">Use a saved authenticated browser session for protected websites.</p>
+                                </div>
+                                <div class="toggle-grid">
+                                    <label class="toggle-card" for="autoclick">
+                                        <span>
+                                            <strong>Explore interactions</strong>
+                                            <small>Click safe interactive elements</small>
+                                        </span>
+                                        <input id="autoclick" name="autoclick" type="checkbox">
+                                    </label>
+                                    <label class="toggle-card" for="screenshots">
+                                        <span>
+                                            <strong>Keep screenshots</strong>
+                                            <small>Capture page-level visual previews</small>
+                                        </span>
+                                        <input id="screenshots" name="screenshots" type="checkbox">
+                                    </label>
+                                    <label class="toggle-card" for="interactive">
+                                        <span>
+                                            <strong>Interactive control</strong>
+                                            <small>Expose local browser DevTools while this crawl runs</small>
+                                        </span>
+                                        <input id="interactive" name="interactive" type="checkbox">
+                                    </label>
+                                </div>
+                            </div>
+                        </details>
+
+                        <div class="form-actions">
+                            <p>Your crawl runs privately inside this WebVault.</p>
+                            <button class="button button-primary button-large" id="crawlSubmit" type="submit">
+                                <span>Begin capture</span><span aria-hidden="true">→</span>
+                            </button>
+                        </div>
+                    </form>
+                </article>
+
+                <aside class="activity-card" aria-labelledby="activityHeading">
+                    <div class="section-heading compact-heading">
+                        <div>
+                            <p class="eyebrow">Activity</p>
+                            <h2 id="activityHeading">Recent captures</h2>
+                        </div>
+                        <button class="icon-button" id="refreshJobs" type="button" title="Refresh jobs" aria-label="Refresh jobs">↻</button>
+                    </div>
+                    <div class="job-list" id="jobList" aria-live="polite">
+                        <div class="empty-state compact-empty">
+                            <span class="empty-mark" aria-hidden="true">◎</span>
+                            <strong>No captures yet</strong>
+                            <p>Your latest crawl progress will appear here.</p>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <section class="workspace-panel tab-panel" id="panel-library" role="tabpanel" data-tab-panel="library" aria-labelledby="libraryHeading" hidden>
+            <div class="library-header">
+                <div>
+                    <span class="section-number">02</span>
+                    <p class="eyebrow">Archive library</p>
+                    <h2 id="libraryHeading">Everything you have preserved</h2>
+                    <p>Browse collections, replay captures, or begin a fresh update.</p>
+                </div>
+                <div class="library-search-row">
+                    <label class="search-field library-search-field" for="librarySearch">
+                        <span aria-hidden="true">⌕</span>
+                        <input id="librarySearch" type="search" placeholder="Find something in your archive…" autocomplete="off">
+                    </label>
+                    <button class="icon-button" id="refreshArchives" type="button" title="Refresh library" aria-label="Refresh library">↻</button>
+                </div>
+            </div>
+            <div class="library-filter-bar" aria-label="Library display and search options">
+                <input id="libraryView" type="hidden" value="collections">
+                <input id="librarySearchField" type="hidden" value="all">
+                <input id="librarySort" type="hidden" value="date-desc">
+                <div class="library-filter-group">
+                    <span class="library-filter-label">Show</span>
+                    <div class="choice-pills" data-control="libraryView">
+                        <button class="choice-pill is-selected" type="button" data-value="collections" aria-pressed="true">Collections</button>
+                        <button class="choice-pill" type="button" data-value="crawls" aria-pressed="false">Individual crawls</button>
+                    </div>
+                </div>
+                <div class="library-filter-group library-search-scope">
+                    <span class="library-filter-label">Search in</span>
+                    <div class="choice-pills" data-control="librarySearchField">
+                        <button class="choice-pill is-selected" type="button" data-value="all" aria-pressed="true">Everything</button>
+                        <button class="choice-pill" type="button" data-value="collection" aria-pressed="false">Collection names</button>
+                        <button class="choice-pill" type="button" data-value="crawl" aria-pressed="false">Web addresses</button>
+                        <button class="choice-pill" type="button" data-value="title" aria-pressed="false">Titles</button>
+                        <button class="choice-pill" type="button" data-value="content" aria-pressed="false">Page text</button>
+                        <button class="choice-pill" type="button" data-value="date" aria-pressed="false">Dates</button>
+                    </div>
+                </div>
+                <div class="library-filter-group">
+                    <span class="library-filter-label">Order</span>
+                    <div class="choice-pills" data-control="librarySort">
+                        <button class="choice-pill is-selected" type="button" data-value="date-desc" aria-pressed="true">Latest</button>
+                        <button class="choice-pill" type="button" data-value="date-asc" aria-pressed="false">Oldest</button>
+                        <button class="choice-pill" type="button" data-value="alpha-asc" aria-pressed="false">A–Z</button>
+                        <button class="choice-pill" type="button" data-value="alpha-desc" aria-pressed="false">Z–A</button>
+                    </div>
+                </div>
+            </div>
+            <div id="searchResults" class="management-list" aria-live="polite" hidden></div>
+            <div class="collection-grid" id="archiveList" aria-live="polite">
+                <div class="empty-state"><div class="loading-line"></div><p>Opening your archive…</p></div>
+            </div>
+        </section>
+
+        <section class="workspace-panel tab-panel" id="panel-settings" role="tabpanel" data-tab-panel="settings" aria-labelledby="settingsHeading" hidden>
+            <div class="settings-layout">
+                <div class="settings-intro">
+                    <span class="section-number">03</span>
+                    <p class="eyebrow">Archive settings</p>
+                    <h2 id="settingsHeading">Keep your library in order</h2>
+                    <p>Rename, refresh, or permanently remove collections. Destructive actions always ask for confirmation.</p>
+                    <div class="settings-tool-grid">
+                        <button class="settings-tool-card" id="createCollection" type="button"><span class="settings-tool-icon" aria-hidden="true">＋</span><span><strong>Create collection</strong><small>Add an empty collection now and choose it for future captures.</small></span></button>
+                        <a class="settings-tool-card" href="/profiles"><span class="settings-tool-icon" aria-hidden="true">◉</span><span><strong>Browser login profiles</strong><small>Prepare authenticated sessions for protected websites.</small></span></a>
+                        <a class="settings-tool-card" href="/stats"><span class="settings-tool-icon" aria-hidden="true">↗</span><span><strong>Server statistics</strong><small>Review storage, resource usage, jobs, and worker health.</small></span></a>
+                    </div>
+                    {% if auth_enabled %}
+                    <form method="post" action="/logout" class="account-card">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <div><strong>Signed in</strong><span>Session protected</span></div>
+                        <button class="button button-secondary" type="submit">Sign out</button>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="management-list" id="collectionListPanel" aria-live="polite">
+                    <div class="empty-state"><div class="loading-line"></div><p>Loading collections…</p></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <span>WebVault</span>
+        <span>Browsertrix · Garage · ReplayWeb.page</span>
+    </footer>
+</div>
+
+<dialog class="action-dialog" id="actionDialog" aria-labelledby="dialogTitle">
+    <form method="dialog" id="actionDialogForm">
+        <button class="dialog-close" value="cancel" aria-label="Close dialog" type="button" data-dialog-close>×</button>
+        <p class="eyebrow" id="dialogEyebrow">Confirm action</p>
+        <h2 id="dialogTitle">Are you sure?</h2>
+        <p id="dialogDescription"></p>
+        <div class="field-block" id="dialogInputGroup" hidden>
+            <label for="dialogInput" id="dialogInputLabel">New name</label>
+            <input id="dialogInput" autocomplete="off">
+        </div>
+        <div class="dialog-actions">
+            <button class="button button-quiet" value="cancel" type="button" data-dialog-close>Cancel</button>
+            <button class="button button-primary" id="dialogConfirm" value="confirm" type="submit">Continue</button>
+        </div>
+    </form>
+</dialog>
+
+<noscript><div class="noscript">WebVault’s dashboard needs JavaScript for capture controls and live updates.</div></noscript>
+{% endblock %}
+
+{% block scripts %}<script src="/static/home.js" defer></script>{% endblock %}

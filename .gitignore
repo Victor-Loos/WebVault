@@ -1,11 +1,17 @@
 # Secrets (auto-generated)
 .env
 garage/garage.toml
+garage/.layout-capacity
 !garage/garage.toml.example
 
 # Crawl outputs
 crawls/collections/
 crawls/*.yaml
+crawls/*.db
+crawls/*.db-shm
+crawls/*.db-wal
+crawls/jobs.json*
+crawls/profiles/
 
 # Garage data (named volumes — not filesystem dirs, but keep for clarity)
 garage_data/

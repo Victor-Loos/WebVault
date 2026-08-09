@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="app-shell">
+    <header class="site-header compact-site-header">
+        <a class="wordmark" href="/#capture" aria-label="WebVault capture home">
+            <span class="wordmark-icon" aria-hidden="true"><img src="/img/icon.svg" alt=""></span>
+            <span><strong>WebVault</strong><small>Private web archive</small></span>
+        </a>
+        <nav class="page-nav" aria-label="Server statistics navigation">
+            <a class="button button-quiet" href="/#library">Library</a>
+            <button class="button button-secondary" id="refreshStats" type="button">Refresh</button>
+        </nav>
+    </header>
+
+    <main id="main-content" class="stats-workspace">
+        <header class="stats-intro">
+            <div>
+                <p class="eyebrow">System overview</p>
+                <h1>Server statistics</h1>
+                <p>Resource, archive, and crawl activity for this WebVault instance.</p>
+            </div>
+            <div><p class="stats-updated" id="statsUpdated" role="status">Loading current statistics…</p><p class="stats-scope">Resource measurements cover the WebVault application container, not the Docker host or other services.</p></div>
+        </header>
+
+        <div class="stats-grid" id="statsGrid" aria-live="polite">
+            <section class="stat-panel"><span class="stat-label">Process uptime</span><strong id="statUptime">—</strong><small>FastAPI service</small></section>
+            <section class="stat-panel"><span class="stat-label">Load average</span><strong id="statLoad">—</strong><small id="statCpu">Across available CPUs</small></section>
+            <section class="stat-panel"><span class="stat-label">Memory</span><strong id="statMemory">—</strong><small id="statMemoryDetail">Container usage</small></section>
+            <section class="stat-panel"><span class="stat-label">Crawl storage</span><strong id="statDisk">—</strong><small id="statDiskDetail">Local working volume</small></section>
+            <section class="stat-panel"><span class="stat-label">Archive storage</span><strong id="statArchive">—</strong><small id="statArchiveDetail">Garage object storage</small></section>
+            <section class="stat-panel"><span class="stat-label">Crawl jobs</span><strong id="statJobTotal">—</strong><small id="statJobDetail">SQLite history</small></section>
+        </div>
+
+        <section class="status-breakdown" aria-labelledby="jobStatusHeading">
+            <div>
+                <p class="eyebrow">Queue health</p>
+                <h2 id="jobStatusHeading">Jobs by status</h2>
+            </div>
+            <div class="status-breakdown-list" id="jobStatusList"><span class="quiet-badge">Loading</span></div>
+        </section>
+    </main>
+
+    <footer class="site-footer"><span>WebVault</span><span>Local operational data only</span></footer>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="/static/stats.js" defer></script>{% endblock %}

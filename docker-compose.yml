@@ -7,11 +7,13 @@ services:
       - ./garage/garage.toml:/etc/garage.toml:ro
       - garage_data:/var/lib/garage/data
       - garage_meta:/var/lib/garage/meta
+    # Garage is only needed by the internal Docker network. These localhost
+    # bindings allow administration from the host without exposing it on LAN.
     ports:
-      - "3900:3900"
-      - "3901:3901"
-      - "3903:3903"
-      - "3902:3902"
+      - "127.0.0.1:3900:3900"
+      - "127.0.0.1:3901:3901"
+      - "127.0.0.1:3903:3903"
+      - "127.0.0.1:3902:3902"
     networks:
       - webvault
     healthcheck:
@@ -22,11 +24,16 @@ services:
       start_period: 10s
 
   crawler:
-    image: docker.io/webrecorder/browsertrix-crawler:latest
+    # Pin the tested release so saved authentication profiles stay compatible.
+    image: ${BROWSERTRIX_IMAGE:-docker.io/webrecorder/browsertrix-crawler:1.14.0}
     container_name: webvault-crawler
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:9222:9222"
+      - "127.0.0.1:9223:9223"
     volumes:
       - ./crawls:/crawls/
+      - webvault_profiles:/profiles
     environment:
       - CRAWL_ID=${CRAWL_ID:-}
     networks:
@@ -39,18 +46,62 @@ services:
     build:
       context: ./orchestrator
       dockerfile: Dockerfile
+      target: orchestrator
     container_name: webvault-orchestrator
     restart: unless-stopped
     ports:
-      - "8008:8080"
+      - "${WEBVAULT_BIND_ADDRESS:-127.0.0.1}:8008:8080"
     environment:
       - GARAGE_ENDPOINT=http://garage:3900
       - GARAGE_BUCKET=${GARAGE_BUCKET:-archives}
+      - GARAGE_CAPACITY=${GARAGE_CAPACITY:-100G}
       - CRAWL_OUTPUT_DIR=/crawls
+      - PROFILE_DIR=/profiles
+      - WEBVAULT_DB_PATH=/data/webvault.db
+      - CRAWLER_CONTAINER_NAME=webvault-crawler
+      - WEBVAULT_USERNAME=${WEBVAULT_USERNAME:-}
+      - WEBVAULT_PASSWORD=${WEBVAULT_PASSWORD:-}
+      - WEBVAULT_ALLOW_UNAUTHENTICATED=${WEBVAULT_ALLOW_UNAUTHENTICATED:-false}
+      - WEBVAULT_BIND_ADDRESS=${WEBVAULT_BIND_ADDRESS:-127.0.0.1}
+      - WEBVAULT_ALLOWED_HOSTS=${WEBVAULT_ALLOWED_HOSTS:-localhost,127.0.0.1,[::1]}
+      - SCREENCAST_PORT=${SCREENCAST_PORT:-9037}
+      - SCREENCAST_URL=http://webvault-crawler:${SCREENCAST_PORT:-9037}
+    volumes:
+      - ./crawls:/crawls
+      - webvault_profiles:/profiles:ro
+      - webvault_state:/data
+      - ./replayweb:/replayweb:ro
+      - ./.env:/app/.env
+    depends_on:
+      garage:
+        condition: service_healthy
+      crawler:
+        condition: service_started
+      worker:
+        condition: service_healthy
+    networks:
+      - webvault
+
+  worker:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+      target: worker
+    container_name: webvault-worker
+    restart: unless-stopped
+    command: ["python", "-m", "webvault.worker"]
+    environment:
+      - GARAGE_ENDPOINT=http://garage:3900
+      - GARAGE_BUCKET=${GARAGE_BUCKET:-archives}
+      - GARAGE_CAPACITY=${GARAGE_CAPACITY:-100G}
+      - CRAWL_OUTPUT_DIR=/crawls
+      - PROFILE_DIR=/profiles
+      - WEBVAULT_DB_PATH=/data/webvault.db
       - CRAWLER_CONTAINER_NAME=webvault-crawler
     volumes:
       - ./crawls:/crawls
-      - ./replayweb:/replayweb:ro
+      - webvault_profiles:/profiles:ro
+      - webvault_state:/data
       - ./.env:/app/.env
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
@@ -58,6 +109,13 @@ services:
         condition: service_healthy
       crawler:
         condition: service_started
+    stop_grace_period: 2m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import pathlib,sys; sys.exit(b'webvault.worker' not in pathlib.Path('/proc/1/cmdline').read_bytes())"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     networks:
       - webvault
 
@@ -68,3 +126,5 @@ networks:
 volumes:
   garage_data:
   garage_meta:
+  webvault_state:
+  webvault_profiles:

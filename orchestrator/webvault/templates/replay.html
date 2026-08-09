@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>{{ title }}</title>
+    <script src="/replay/ui.js"></script>
+    <style>html,body,replay-web-page{display:block;width:100%;height:100%;margin:0}body{overflow:hidden;background:#171512}</style>
+</head>
+<body>
+    <replay-web-page source="{{ source }}" replaybase="/wb/" swName="sw.js" embed="default" loading="eager" {% if initial_url %}url="{{ initial_url }}"{% else %}view="pages"{% endif %}></replay-web-page>
+    <script>
+        if (!window.isSecureContext && !["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname)) {
+            console.warn("Replay requires HTTPS or localhost in most browsers.");
+        }
+    </script>
+</body>
+</html>

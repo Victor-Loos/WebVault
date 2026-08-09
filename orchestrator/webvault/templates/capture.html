@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="app-shell">
+    <header class="site-header compact-site-header">
+        <a class="wordmark" href="/#capture" aria-label="WebVault capture home">
+            <span class="wordmark-icon" aria-hidden="true"><img src="/img/icon.svg" alt=""></span>
+            <span><strong>WebVault</strong><small>Capture record</small></span>
+        </a>
+        <nav class="page-nav" aria-label="Capture navigation">
+            <a class="button button-quiet" href="/#library">Library</a>
+            <a class="button button-secondary" href="/stats">Server statistics</a>
+        </nav>
+    </header>
+
+    <main id="main-content" class="capture-detail-workspace" data-job-id="{{ capture.job_id }}">
+        <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/#library">Library</a><span>/</span><span>{{ page_title }}</span></nav>
+        <header class="capture-detail-hero">
+            <div>
+                <p class="eyebrow">Capture information</p>
+                <h1>{{ page_title }}</h1>
+                <a class="source-link capture-source" href="{{ capture.seed_url }}" target="_blank" rel="noopener noreferrer">{{ capture.seed_url }}</a>
+            </div>
+            <div class="capture-detail-actions">
+                {% if capture.archive_url %}<a class="button button-primary" href="{{ capture.archive_url }}">Replay capture</a>{% endif %}
+                {% if capture.download_url %}<a class="button button-secondary" href="{{ capture.download_url }}">Download WACZ</a>{% endif %}
+            </div>
+        </header>
+
+        <div class="capture-detail-layout">
+            <article class="capture-information">
+                <section class="capture-metadata-grid" aria-label="Capture metadata">
+                    <div><span>Status</span><strong class="status-badge is-{{ capture.status }}" id="captureStatus">{{ capture.status }}</strong></div>
+                    <div><span>Captured</span><strong>{% if capture.completed_at or capture.created_at %}<time data-local-date datetime="{{ capture.completed_at or capture.created_at }}">{{ capture.completed_at or capture.created_at }}</time>{% else %}Unknown{% endif %}</strong></div>
+                    <div><span>Pages</span><strong id="capturePages">{{ capture.archive_metadata.pages_count or capture.pages_crawled }}</strong></div>
+                    <div><span>Failed pages</span><strong>{{ capture.pages_failed }}</strong></div>
+                    <div><span>Archive size</span><strong data-bytes="{{ capture.archive_size }}">{{ capture.archive_size }} bytes</strong></div>
+                    <div><span>Collection</span><strong id="captureCollection">{{ capture.collection }}</strong></div>
+                </section>
+
+                <section class="capture-live-progress" id="captureLiveProgress" {% if capture.status not in ["queued", "running", "uploading"] %}hidden{% endif %}>
+                    <div><span class="status-dot" aria-hidden="true"></span><strong>Capture in progress</strong></div>
+                    <progress id="captureProgress" max="{{ [capture.pages_total, capture.pages_crawled, 1] | max }}" value="{{ capture.pages_crawled }}" aria-label="Capture page progress"></progress>
+                    <p id="captureMessage">{{ capture.message }}</p>
+                    <div class="capture-live-actions"><a class="button button-secondary" href="/live/?job={{ capture.job_id }}">Watch live</a>{% if capture.interactive %}<a class="button button-primary" href="/live/control" target="_blank" rel="noopener">Interact with browser</a>{% endif %}</div>
+                </section>
+
+                <section class="capture-settings" aria-labelledby="captureSettingsHeading">
+                    <div class="section-heading compact-heading"><div><p class="eyebrow">Configuration</p><h2 id="captureSettingsHeading">Crawl settings</h2></div></div>
+                    <dl class="settings-definition">
+                        <div><dt>job_id</dt><dd>{{ capture.job_id }}</dd></div>
+                        <div><dt>archive_filename</dt><dd>{{ capture.archive_filename or "—" }}</dd></div>
+                        {% for key, value in capture.crawl_request.items() if key not in ["seeds", "collection"] %}
+                        <div><dt>{{ key }}</dt><dd>{{ value if value is not none else "—" }}</dd></div>
+                        {% endfor %}
+                        {% for key, value in capture.archive_metadata.items() %}
+                        <div><dt>archive.{{ key }}</dt><dd>{{ value if value is not none else "—" }}</dd></div>
+                        {% endfor %}
+                    </dl>
+                    {% if capture.can_rerun %}
+                    <div class="capture-rerun-actions">
+                        <button class="button button-primary" id="rerunSame" type="button">Run again with same settings</button>
+                        <a class="button button-secondary" href="/?from_job={{ capture.job_id }}#capture">Review and modify settings</a>
+                    </div>
+                    <p class="inline-notice" id="rerunFeedback" role="status" hidden></p>
+                    {% endif %}
+                </section>
+
+                <section class="capture-management" aria-labelledby="captureManagementHeading">
+                    <div class="section-heading compact-heading"><div><p class="eyebrow">Organization</p><h2 id="captureManagementHeading">Manage capture</h2></div></div>
+                    <div class="capture-management-grid">
+                        <form id="moveCaptureForm" class="capture-management-card" data-collection="{{ capture.collection }}" data-filename="{{ capture.archive_filename }}">
+                            <div><strong>Change collection</strong><p>Move this WACZ and its capture record without changing its history.</p></div>
+                            <label class="field-block compact" for="captureCollectionInput"><span>Collection</span><input id="captureCollectionInput" name="collection" value="{{ capture.collection }}" list="captureCollections" required {% if not capture.archive_filename %}disabled{% endif %}></label>
+                            <datalist id="captureCollections"></datalist>
+                            <button class="button button-secondary" type="submit" {% if not capture.archive_filename %}disabled{% endif %}>Move capture</button>
+                        </form>
+                        <div class="capture-management-card">
+                            <div><strong>Useful actions</strong><p>Share this record or return to its original website.</p></div>
+                            <div class="capture-utility-actions">
+                                <button class="button button-secondary" id="copyCaptureLink" type="button">Copy record link</button>
+                                {% if capture.seed_url %}<a class="button button-quiet" href="{{ capture.seed_url }}" target="_blank" rel="noopener noreferrer">Open original site</a>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="capture-danger-zone">
+                        <div><strong>Delete this capture</strong><p>Permanently removes this version, its WACZ archive, and local crawl files. Other versions are not affected.</p></div>
+                        <button class="button button-danger" id="deleteCapture" type="button" {% if capture.status in ["queued", "running", "uploading"] %}disabled{% endif %}>Delete capture…</button>
+                    </div>
+                    <p class="inline-notice" id="managementFeedback" role="status" hidden></p>
+                </section>
+            </article>
+
+            <aside class="capture-history" aria-labelledby="historyHeading">
+                <p class="eyebrow">Capture timeline</p>
+                <h2 id="historyHeading">{{ history|length }} version{% if history|length != 1 %}s{% endif %}</h2>
+                {% if history|length > 1 %}<p class="timeline-intro">Compare every crawl of this URL. The newest record is shown first.</p>{% endif %}
+                <ol class="timeline-list">
+                    {% for item in history %}
+                    <li class="timeline-item {% if item.job_id == capture.job_id %}is-current{% endif %}">
+                        <span class="timeline-marker" aria-hidden="true"></span>
+                        <div class="timeline-content">
+                            <div class="timeline-version-heading"><a href="/captures/{{ item.job_id }}">{% if item.completed_at or item.created_at %}<time data-local-date datetime="{{ item.completed_at or item.created_at }}">{{ item.completed_at or item.created_at }}</time>{% else %}{{ item.job_id }}{% endif %}</a>{% if loop.first %}<span class="timeline-latest">Latest</span>{% endif %}</div>
+                            <small>{{ item.pages_crawled }} pages · {% if item.archive_size %}<span data-bytes="{{ item.archive_size }}">{{ item.archive_size }} bytes</span> · {% endif %}{{ item.collection }} · {{ item.status }}</small>
+                            <div class="timeline-actions"><a href="/captures/{{ item.job_id }}">View information</a>{% if item.archive_url %}<a href="{{ item.archive_url }}">Replay</a>{% endif %}</div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ol>
+            </aside>
+        </div>
+    </main>
+    <footer class="site-footer"><span>WebVault</span><span>Complete capture history</span></footer>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="/static/capture.js" defer></script>{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block body %}
+<main class="login-shell" id="main-content">
+    <section class="login-story" aria-hidden="true">
+        <div class="login-story-inner">
+            <span class="wordmark-icon large-icon"><img src="/img/icon.svg" alt=""></span>
+            <p class="eyebrow">A private record</p>
+            <h1>The web changes.<br><em>Your archive does not.</em></h1>
+            <p>Return to the websites, stories, and sources you chose to preserve.</p>
+            <div class="edition-mark"><span>WebVault</span><span>Private archive</span></div>
+        </div>
+    </section>
+    <section class="login-form-panel">
+        <form method="post" action="/login" class="login-form">
+            <a class="mobile-wordmark" href="/#capture"><img src="/img/icon.svg" alt=""><strong>WebVault</strong></a>
+            <p class="eyebrow">Welcome back</p>
+            <h2>Open your archive</h2>
+            <p class="login-copy">Sign in to capture, organize, and replay your preserved web.</p>
+            {% if error %}<div class="inline-notice is-error" role="alert">{{ error }}</div>{% endif %}
+            <input type="hidden" name="next" value="{{ next_url }}">
+            <div class="field-block">
+                <label for="username">Username</label>
+                <input id="username" name="username" value="{{ username }}" autocomplete="username" required autofocus>
+            </div>
+            <div class="field-block">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" autocomplete="current-password" required>
+            </div>
+            <button class="button button-primary button-large login-button" type="submit">Enter WebVault <span aria-hidden="true">→</span></button>
+            <p class="privacy-note"><span class="status-dot" aria-hidden="true"></span>Your credentials stay on this server.</p>
+        </form>
+    </section>
+</main>
+{% endblock %}

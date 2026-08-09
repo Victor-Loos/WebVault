@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="replay-layout">
+    <header class="replay-header">
+        <a class="wordmark replay-wordmark" href="/#capture" aria-label="WebVault capture home">
+            <span class="wordmark-icon"><img src="/img/icon.svg" alt=""></span>
+            <span><strong>WebVault</strong><small>Replay room</small></span>
+        </a>
+        <div class="replay-title-block">
+            <span>{{ back_label }}</span>
+            <strong>{{ replay_title }}</strong>
+        </div>
+        <nav class="replay-actions" aria-label="Replay actions">
+            <a class="button button-quiet" href="{{ back_href }}">← Back to collection</a>
+            <a class="button button-secondary" href="{{ download_href }}">Download WACZ</a>
+        </nav>
+    </header>
+    <main class="replay-stage" id="main-content">
+        <iframe class="replay-shell" src="/replay/?source={{ source | urlencode }}&title={{ replay_title | urlencode }}{% if initial_url %}&url={{ initial_url | urlencode }}{% endif %}" title="Replay {{ replay_title }}"></iframe>
+    </main>
+</div>
+{% endblock %}
