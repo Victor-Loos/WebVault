@@ -484,7 +484,12 @@ def delete_file(collection: str, filename: str) -> dict[str, Any]:
 
 
 def absolute_route_url(request: Request, route_name: str, **path_params: str) -> str:
-    return str(request.url_for(route_name, **path_params))
+    absolute = str(request.url_for(route_name, **path_params))
+    forwarded_proto = request.headers.get("x-forwarded-proto")
+    if forwarded_proto:
+        parts = urlsplit(absolute)
+        absolute = parts._replace(scheme=forwarded_proto.split(",")[0].strip()).geturl()
+    return absolute
 
 
 def replay_initial_url(collection: str, filename: str) -> str:

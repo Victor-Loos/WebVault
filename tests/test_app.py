@@ -118,6 +118,35 @@ def test_replay_rejects_attacker_controlled_sources():
     assert data_url.status_code == 400
 
 
+def test_absolute_route_url_honors_forwarded_proto():
+    from starlette.requests import Request
+
+    def make_request(forwarded_proto: str | None):
+        headers = [(b"host", b"testserver")]
+        if forwarded_proto:
+            headers.append((b"x-forwarded-proto", forwarded_proto.encode()))
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "scheme": "http",
+            "server": ("testserver", 80),
+            "root_path": "",
+            "headers": headers,
+            "app": app.app,
+            "router": app.app.router,
+        }
+        return Request(scope)
+
+    plain = app.absolute_route_url(
+        make_request(None), "replay_wacz", collection="docs", filename="a.wacz"
+    )
+    forwarded = app.absolute_route_url(
+        make_request("https"), "replay_wacz", collection="docs", filename="a.wacz"
+    )
+    assert plain.startswith("http://testserver/replay-wacz/docs/a.wacz")
+    assert forwarded.startswith("https://testserver/replay-wacz/docs/a.wacz")
+
+
 def test_delete_capture_removes_archive_and_record(monkeypatch, tmp_path):
     jobs = {
         "capture-1": {
