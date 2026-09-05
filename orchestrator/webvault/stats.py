@@ -1,12 +1,13 @@
 import os
 import shutil
+import socket
 import time
 from pathlib import Path
 from typing import Any
 
 from .config import settings
 from .state import job_store
-from .storage import list_all_wacz_keys
+from .storage import get_s3_client, list_all_wacz_keys
 
 PROCESS_STARTED_AT = time.time()
 _SIZE_UNITS = {
@@ -68,6 +69,93 @@ def _memory_stats():
     return max(total - available, 0), total or None
 
 
+def _browsertrix_status(worker_state: str) -> dict[str, str]:
+    try:
+        socket.getaddrinfo(settings.crawler_container_name, None)
+    except OSError:
+        return {
+            "status": "unavailable",
+            "state": "unreachable",
+            "detail": "Crawler container is not reachable",
+        }
+    return {
+        "status": "available",
+        "state": "active" if worker_state == "busy" else "idle",
+        "detail": "Runtime detected on the internal network",
+    }
+
+
+def _worker_status() -> dict[str, Any]:
+    heartbeat = job_store.get_heartbeat("crawl-worker")
+    if not heartbeat:
+        return {
+            "status": "unavailable",
+            "state": "unknown",
+            "heartbeat_age_seconds": None,
+            "detail": "No worker heartbeat",
+        }
+    heartbeat_age = max(int(time.time() - heartbeat["last_seen_at"]), 0)
+    status = "healthy" if heartbeat_age <= 30 else "stale"
+    return {
+        "status": status,
+        "state": heartbeat["state"],
+        "heartbeat_age_seconds": heartbeat_age,
+        "detail": f"Heartbeat received {heartbeat_age}s ago",
+    }
+
+
+def _health_summary(
+    archive_status: str,
+    worker_status: str,
+    worker_state: str,
+    browsertrix_status: str,
+) -> dict[str, str]:
+    if archive_status != "available":
+        return {"status": "unavailable", "label": "Archive storage unavailable"}
+    if worker_status != "healthy" or browsertrix_status != "available":
+        return {"status": "unavailable", "label": "Capture service unavailable"}
+    if worker_state == "busy":
+        return {"status": "busy", "label": "Worker busy"}
+    return {"status": "ready", "label": "Ready"}
+
+
+def _health_payload(archive_status: str) -> dict[str, Any]:
+    worker = _worker_status()
+    browsertrix = _browsertrix_status(worker["state"])
+    return {
+        "archive": {
+            "status": archive_status,
+            "state": "ready" if archive_status == "available" else "unreachable",
+            "detail": "Garage bucket is accessible"
+            if archive_status == "available"
+            else "Garage bucket is not accessible",
+        },
+        "worker": worker,
+        "browsertrix": browsertrix,
+        "summary": _health_summary(
+            archive_status,
+            worker["status"],
+            worker["state"],
+            browsertrix["status"],
+        ),
+    }
+
+
+def get_system_health() -> dict[str, Any]:
+    archive_status = "available"
+    try:
+        get_s3_client(timeout_seconds=2).list_objects_v2(
+            Bucket=settings.garage_bucket,
+            MaxKeys=1,
+        )
+    except Exception:
+        archive_status = "unavailable"
+    return {
+        "generated_at": time.time(),
+        **_health_payload(archive_status),
+    }
+
+
 def get_server_stats() -> dict[str, Any]:
     jobs = list(job_store.load_all().values())
     archive_status = "available"
@@ -83,14 +171,7 @@ def get_server_stats() -> dict[str, Any]:
     except OSError:
         load_1m = load_5m = load_15m = 0.0
 
-    heartbeat = job_store.get_heartbeat("crawl-worker")
-    heartbeat_age = None
-    worker_status = "unavailable"
-    worker_state = "unknown"
-    if heartbeat:
-        heartbeat_age = max(int(time.time() - heartbeat["last_seen_at"]), 0)
-        worker_state = heartbeat["state"]
-        worker_status = "healthy" if heartbeat_age <= 30 else "stale"
+    health = _health_payload(archive_status)
 
     statuses: dict[str, int] = {}
     for job in jobs:
@@ -127,9 +208,8 @@ def get_server_stats() -> dict[str, Any]:
             else None,
         },
         "jobs": {"total": len(jobs), "statuses": statuses},
-        "worker": {
-            "status": worker_status,
-            "state": worker_state,
-            "heartbeat_age_seconds": heartbeat_age,
-        },
+        "worker": health["worker"],
+        "browsertrix": health["browsertrix"],
+        "health": health["summary"],
+        "services": health,
     }

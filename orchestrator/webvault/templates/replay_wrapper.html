@@ -9,11 +9,11 @@
         </a>
         <div class="replay-title-block">
             <span>{{ back_label }}</span>
-            <strong>{{ replay_title }}</strong>
+            <strong>{% if capture_href %}<a class="replay-title-link" href="{{ capture_href }}" aria-label="View version information: {{ replay_title }}">{{ replay_title }}</a>{% else %}{{ replay_title }}{% endif %}</strong>
         </div>
         <nav class="replay-actions" aria-label="Replay actions">
             <a class="button button-quiet" href="{{ back_href }}">← Back to collection</a>
-            <a class="button button-secondary" href="{{ download_href }}">Download WACZ</a>
+            <a class="button button-secondary" href="{{ download_href }}">Download</a>
         </nav>
     </header>
     <main class="replay-stage" id="main-content">

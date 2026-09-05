@@ -160,26 +160,36 @@
             elements.archiveList.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><span class="empty-mark">${hasArchives ? "⌕" : "◇"}</span><strong>${hasArchives ? "No matching items" : "Your library is ready"}</strong><p>${hasArchives ? "Try another filter or search phrase." : "Complete your first capture and it will appear here."}</p>${hasArchives ? "" : '<button class="button button-primary" type="button" data-action="go-capture">Begin your first capture</button>'}</div>`;
             return;
         }
-        elements.archiveList.innerHTML = visible.map((item, index) => view === "collections" ? `
-            <article class="collection-card">
-                <span class="collection-card-index">${String(index + 1).padStart(2, "0")}</span>
-                <p class="eyebrow">${Number(item.file_count || 0)} capture${item.file_count === 1 ? "" : "s"}</p>
-                <h3>${escapeHtml(item.title || collectionLabel(item.name))}</h3>
-                <p class="collection-card-source">${escapeHtml(item.name)}</p>
-                <p class="collection-card-meta">${formatBytes(item.size_bytes)}${captureDate(item.latest_capture) ? ` · Last saved ${escapeHtml(captureDate(item.latest_capture))}` : ""}</p>
-                <div class="collection-card-actions"><a class="button button-primary" href="/archive/${encodeURIComponent(item.name)}">Open collection</a></div>
-            </article>` : `
-            <article class="collection-card">
-                <span class="collection-card-index">${String(index + 1).padStart(2, "0")}</span>
-                <p class="eyebrow">${escapeHtml(collectionLabel(item.collection))} · ${Number(item.version_count || 1)} version${item.version_count === 1 ? "" : "s"}</p>
-                <h3>${escapeHtml(item.title || item.seed_url)}</h3>
-                <p class="collection-card-source">${escapeHtml(item.seed_url || "")}</p>
-                <p class="collection-card-meta">${Number(item.pages_count || 0)} pages · ${formatBytes(item.size_bytes)}${captureDate(item.latest_capture) ? ` · ${escapeHtml(captureDate(item.latest_capture))}` : ""}</p>
-                <div class="collection-card-actions">
-                    <a class="button button-primary" href="${item.job_id ? `/captures/${encodeURIComponent(item.job_id)}` : `/archive/${encodeURIComponent(item.collection)}`}">${item.job_id ? "Capture details" : "Open collection"}</a>
-                    ${item.archive_url ? `<a class="button button-secondary" href="${escapeHtml(item.archive_url)}">Replay latest</a>` : ""}
-                </div>
-            </article>`).join("");
+        elements.archiveList.innerHTML = visible.map((item, index) => {
+            const cardIndex = String(index + 1).padStart(2, "0");
+            if (view === "collections") {
+                const title = item.title || collectionLabel(item.name);
+                return `
+                    <a class="collection-card collection-card-link" href="/archive/${encodeURIComponent(item.name)}" aria-label="Open collection: ${escapeHtml(title)}">
+                        <span class="collection-card-index">${cardIndex}</span>
+                        <span class="collection-card-arrow" aria-hidden="true">↗</span>
+                        <p class="eyebrow">${Number(item.file_count || 0)} version${item.file_count === 1 ? "" : "s"}</p>
+                        <h3>${escapeHtml(title)}</h3>
+                        <p class="collection-card-source">${escapeHtml(item.name)}</p>
+                        <p class="collection-card-meta">${formatBytes(item.size_bytes)}${captureDate(item.latest_capture) ? ` · Last saved ${escapeHtml(captureDate(item.latest_capture))}` : ""}</p>
+                    </a>`;
+            }
+            const title = item.title || item.seed_url;
+            const detailsUrl = item.job_id ? `/captures/${encodeURIComponent(item.job_id)}` : `/archive/${encodeURIComponent(item.collection)}`;
+            const detailsLabel = item.job_id ? "View latest version" : "Open collection";
+            return `
+                <article class="collection-card">
+                    <a class="collection-card-link" href="${detailsUrl}" aria-label="${detailsLabel}: ${escapeHtml(title)}">
+                        <span class="collection-card-index">${cardIndex}</span>
+                        <span class="collection-card-arrow" aria-hidden="true">↗</span>
+                        <p class="eyebrow">${escapeHtml(collectionLabel(item.collection))} · ${Number(item.version_count || 1)} version${item.version_count === 1 ? "" : "s"}</p>
+                        <h3>${escapeHtml(title)}</h3>
+                        <p class="collection-card-source">${escapeHtml(item.seed_url || "")}</p>
+                        <p class="collection-card-meta">${Number(item.pages_count || 0)} pages · ${formatBytes(item.size_bytes)}${captureDate(item.latest_capture) ? ` · ${escapeHtml(captureDate(item.latest_capture))}` : ""}</p>
+                    </a>
+                    ${item.archive_url ? `<div class="collection-card-actions"><a class="button button-quiet" href="${escapeHtml(item.archive_url)}">Replay</a></div>` : ""}
+                </article>`;
+        }).join("");
     }
 
     function jobStatusClass(status) {
@@ -192,7 +202,7 @@
     function renderJobs() {
         if (!state.jobs.length) {
             elements.jobList.classList.remove("is-scrollable");
-            elements.jobList.innerHTML = '<div class="empty-state compact-empty"><span class="empty-mark" aria-hidden="true">◎</span><strong>No captures yet</strong><p>Your latest crawl progress will appear here.</p></div>';
+            elements.jobList.innerHTML = '<div class="empty-state compact-empty"><span class="empty-mark" aria-hidden="true">◎</span><strong>No captures yet</strong><p>Your latest capture progress will appear here.</p></div>';
             return;
         }
         const recentJobs = state.jobs.slice(0, 8);
@@ -214,11 +224,11 @@
             const replay = job.archive_url
                 ? `<a class="button button-primary" href="${escapeHtml(job.archive_url)}">Replay</a>` : "";
             const rerun = job.crawl_request
-                ? `<button class="button button-quiet" type="button" data-job-action="rerun" data-id="${escapeHtml(job.job_id)}">Run again</button>` : "";
+                ? `<button class="button button-quiet" type="button" data-job-action="rerun" data-id="${escapeHtml(job.job_id)}">New version</button>` : "";
             const cancel = isActive
                 ? `<button class="button button-danger-quiet" type="button" data-job-action="cancel" data-id="${escapeHtml(job.job_id)}">Cancel</button>` : "";
             const information = job.job_type !== "profile"
-                ? `<a class="button button-quiet" href="/captures/${encodeURIComponent(job.job_id)}">Capture info</a>` : "";
+                ? `<a class="button button-quiet" href="/captures/${encodeURIComponent(job.job_id)}">Version info</a>` : "";
             const logs = job.recent_log?.length
                 ? `<details class="job-details"><summary>Technical details</summary><pre>${escapeHtml(job.recent_log.join("\n"))}</pre></details>` : "";
             return `<article class="job-card ${isActive ? "is-active" : ""}">
@@ -240,9 +250,9 @@
         }
         elements.managementList.innerHTML = state.collections.map((collection) => `
             <article class="management-row">
-                <div><strong>${escapeHtml(collection.title || collectionLabel(collection.name))}</strong><span>${collection.file_count} capture${collection.file_count === 1 ? "" : "s"} · ${escapeHtml(collection.name)}</span></div>
+                <div><strong>${escapeHtml(collection.title || collectionLabel(collection.name))}</strong><span>${collection.file_count} version${collection.file_count === 1 ? "" : "s"} · ${escapeHtml(collection.name)}</span></div>
                 <div class="management-actions">
-                    ${collection.can_rerun ? `<button class="button button-quiet" type="button" data-manage-action="update" data-name="${escapeHtml(collection.name)}">Update</button>` : ""}
+                    ${collection.can_rerun ? `<button class="button button-quiet" type="button" data-manage-action="update" data-name="${escapeHtml(collection.name)}">New version</button>` : ""}
                     <button class="button button-quiet" type="button" data-manage-action="rename" data-name="${escapeHtml(collection.name)}">Rename</button>
                     <button class="button button-danger-quiet" type="button" data-manage-action="delete" data-name="${escapeHtml(collection.name)}">Delete</button>
                 </div>
@@ -266,7 +276,7 @@
             results.innerHTML = data.results.length ? data.results.map((result) => {
                 const snippet = escapeHtml(result.snippet || "")
                     .replaceAll("&lt;mark&gt;", "<mark>").replaceAll("&lt;/mark&gt;", "</mark>");
-                return `<article class="management-row"><div><strong>${escapeHtml(result.title || result.url || "Archived page")}</strong><span>${escapeHtml(result.collection)} · ${escapeHtml(result.url)}</span><p>${snippet}</p></div>${result.archive_url ? `<a class="button button-secondary" href="${escapeHtml(result.archive_url)}">Replay capture</a>` : ""}</article>`;
+                return `<article class="management-row"><div><strong>${escapeHtml(result.title || result.url || "Archived page")}</strong><span>${escapeHtml(result.collection)} · ${escapeHtml(result.url)}</span><p>${snippet}</p></div>${result.archive_url ? `<a class="button button-secondary" href="${escapeHtml(result.archive_url)}">Replay</a>` : ""}</article>`;
             }).join("") : '<div class="empty-state"><strong>No matching page text</strong><p>Try fewer or broader words.</p></div>';
         } catch (error) {
             results.hidden = false;
@@ -323,6 +333,29 @@
         }
     }
 
+    function setSystemState(status, label, title) {
+        const indicator = $("#systemState");
+        indicator.className = `system-state is-${status}`;
+        indicator.setAttribute("aria-label", `System status: ${label}`);
+        indicator.title = title;
+        $("#systemStateLabel").textContent = label;
+    }
+
+    async function loadSystemHealth() {
+        try {
+            const health = await api("/api/health");
+            const summary = health.summary;
+            const details = [
+                `Garage ${health.archive.state}`,
+                `Worker ${health.worker.state}`,
+                `Browsertrix ${health.browsertrix.state}`,
+            ].join(" · ");
+            setSystemState(summary.status, summary.label, `${details} — Open system health`);
+        } catch (_error) {
+            setSystemState("unavailable", "Status unavailable", "Open system health");
+        }
+    }
+
     async function loadCollections() {
         const version = ++requestVersion.collections;
         try {
@@ -367,14 +400,13 @@
     }
 
     function queueCollection(name, replace = false) {
-        const action = replace ? "replace" : "update";
         openDialog({
-            eyebrow: replace ? "Fresh replacement" : "Collection update",
-            title: `${replace ? "Replace" : "Update"} ${collectionLabel(name)}?`,
+            eyebrow: replace ? "Fresh replacement" : "New version",
+            title: replace ? `Replace ${collectionLabel(name)}?` : `Create a new version in ${collectionLabel(name)}?`,
             description: replace
-                ? "A new crawl will run first. Existing captures are removed only after it succeeds."
-                : "WebVault will reuse the latest crawl settings and add a new capture.",
-            confirm: replace ? "Start replacement" : "Start update",
+                ? "A new capture will run first. Existing versions are removed only after it succeeds."
+                : "WebVault will reuse the latest capture settings and add a new version.",
+            confirm: replace ? "Start replacement" : "New version",
             onConfirm: async () => {
                 await api(`/api/collections/${encodeURIComponent(name)}/crawl?replace=${replace}`, { method: "POST" });
                 toast(`${collectionLabel(name)} was queued.`);
@@ -388,7 +420,7 @@
         openDialog({
             eyebrow: "New collection",
             title: "Create an empty collection",
-            description: "Use collections to organize related captures. You can select it immediately from the capture form.",
+            description: "Use collections to organize related sites and versions. You can select it immediately from the capture form.",
             confirm: "Create collection",
             input: { label: "Collection name", value: "" },
             onConfirm: async (value) => {
@@ -406,7 +438,7 @@
         openDialog({
             eyebrow: "Rename collection",
             title: "Give this collection a clearer name",
-            description: "Its captures and metadata move together. Replay links will use the new collection address.",
+            description: "Its sites, versions, and metadata move together. Replay links will use the new collection address.",
             confirm: "Rename collection",
             input: { label: "Collection name", value: name },
             onConfirm: async (value) => {
@@ -423,7 +455,7 @@
     function deleteCollection(name) {
         openDialog({
             eyebrow: "Permanent deletion", title: `Delete ${collectionLabel(name)}?`,
-            description: "Every WACZ capture in this collection will be permanently removed. This cannot be undone.",
+            description: "Every saved WACZ version in this collection will be permanently removed. This cannot be undone.",
             confirm: "Delete permanently", danger: true,
             onConfirm: async () => {
                 await api(`/api/collections/${encodeURIComponent(name)}`, { method: "DELETE" });
@@ -445,7 +477,7 @@
         const original = submit.innerHTML;
         submit.disabled = true;
         submit.textContent = "Preparing capture…";
-        setStatus("Checking the crawler and preparing your capture…");
+        setStatus("Checking the capture service and preparing your capture…");
         const payload = {
             seeds,
             collection: $("#collection").value.trim() || null,
@@ -473,7 +505,7 @@
             elements.form.reset();
             $("#seedCount").textContent = "0 addresses";
             $("#previousCaptureNote").hidden = true;
-            $("#collectionHint").textContent = "Leave blank to place this capture in “Not defined”.";
+            $("#collectionHint").textContent = "Leave blank to place this version in “Not defined”.";
             await loadJobs();
         } catch (error) {
             setStatus(error.message, "error");
@@ -500,7 +532,7 @@
                     const result = await api(`/api/captures/history?url=${encodeURIComponent(seeds[0])}`);
                     if (version !== seedHistoryVersion || !result.count) return;
                     const latest = result.captures[0];
-                    note.innerHTML = `Previously captured ${result.count} time${result.count === 1 ? "" : "s"}. <a href="/captures/${encodeURIComponent(latest.job_id)}">View the latest record</a>. A new capture will be added to its history.`;
+                    note.innerHTML = `This site has ${result.count} saved version${result.count === 1 ? "" : "s"}. <a href="/captures/${encodeURIComponent(latest.job_id)}">View the latest version</a>. A new version will be added to its history.`;
                     note.hidden = false;
                 } catch (_error) {
                     // URL validation on submit remains authoritative.
@@ -576,11 +608,11 @@
             return;
         }
         openDialog({
-            eyebrow: "Repeat capture", title: "Run this capture again?",
-            description: "The original seeds and crawl settings will be reused in a new job.", confirm: "Run again",
+            eyebrow: "New version", title: "Create a new version?",
+            description: "The original site addresses and capture settings will be reused.", confirm: "New version",
             onConfirm: async () => {
                 await api(`/api/jobs/${encodeURIComponent(button.dataset.id)}/rerun`, { method: "POST" });
-                toast("Capture queued."); await loadJobs();
+                toast("New version queued."); await loadJobs();
             },
         });
     });
@@ -614,9 +646,11 @@
             setStatus("Settings loaded from the selected capture. Review them before starting a new version.");
         }).catch((error) => setStatus(error.message, "error"));
     }
+    loadSystemHealth();
     Promise.all([loadArchives(), loadJobs(), loadCollections(), loadProfiles()]).then(() => {
         if (!location.hash && state.archives.length) showTab("library");
     });
     window.setInterval(() => { if (!document.hidden) loadJobs(); }, 5000);
     window.setInterval(() => { if (!document.hidden) loadArchives(); }, 15000);
+    window.setInterval(() => { if (!document.hidden) loadSystemHealth(); }, 15000);
 })();

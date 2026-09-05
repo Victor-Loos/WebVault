@@ -5,9 +5,9 @@
     <header class="site-header compact-site-header">
         <a class="wordmark" href="/#capture" aria-label="WebVault capture home">
             <span class="wordmark-icon" aria-hidden="true"><img src="/img/icon.svg" alt=""></span>
-            <span><strong>WebVault</strong><small>Capture record</small></span>
+            <span><strong>WebVault</strong><small>Version record</small></span>
         </a>
-        <nav class="page-nav" aria-label="Capture navigation">
+        <nav class="page-nav" aria-label="Version navigation">
             <a class="button button-quiet" href="/#library">Library</a>
             <a class="button button-secondary" href="/stats">Server statistics</a>
         </nav>
@@ -17,19 +17,19 @@
         <nav class="breadcrumb" aria-label="Breadcrumb"><a href="/#library">Library</a><span>/</span><span>{{ page_title }}</span></nav>
         <header class="capture-detail-hero">
             <div>
-                <p class="eyebrow">Capture information</p>
+                <p class="eyebrow">Version information</p>
                 <h1>{{ page_title }}</h1>
                 <a class="source-link capture-source" href="{{ capture.seed_url }}" target="_blank" rel="noopener noreferrer">{{ capture.seed_url }}</a>
             </div>
             <div class="capture-detail-actions">
-                {% if capture.archive_url %}<a class="button button-primary" href="{{ capture.archive_url }}">Replay capture</a>{% endif %}
-                {% if capture.download_url %}<a class="button button-secondary" href="{{ capture.download_url }}">Download WACZ</a>{% endif %}
+                {% if capture.archive_url %}<a class="button button-primary" href="{{ capture.archive_url }}">Replay</a>{% endif %}
+                {% if capture.download_url %}<a class="button button-secondary" href="{{ capture.download_url }}">Download</a>{% endif %}
             </div>
         </header>
 
         <div class="capture-detail-layout">
             <article class="capture-information">
-                <section class="capture-metadata-grid" aria-label="Capture metadata">
+                <section class="capture-metadata-grid" aria-label="Version metadata">
                     <div><span>Status</span><strong class="status-badge is-{{ capture.status }}" id="captureStatus">{{ capture.status }}</strong></div>
                     <div><span>Captured</span><strong>{% if capture.completed_at or capture.created_at %}<time data-local-date datetime="{{ capture.completed_at or capture.created_at }}">{{ capture.completed_at or capture.created_at }}</time>{% else %}Unknown{% endif %}</strong></div>
                     <div><span>Pages</span><strong id="capturePages">{{ capture.archive_metadata.pages_count or capture.pages_crawled }}</strong></div>
@@ -59,42 +59,42 @@
                     </dl>
                     {% if capture.can_rerun %}
                     <div class="capture-rerun-actions">
-                        <button class="button button-primary" id="rerunSame" type="button">Run again with same settings</button>
-                        <a class="button button-secondary" href="/?from_job={{ capture.job_id }}#capture">Review and modify settings</a>
+                        <button class="button button-primary" id="rerunSame" type="button">New version</button>
+                        <a class="button button-secondary" href="/?from_job={{ capture.job_id }}#capture">New version with changes</a>
                     </div>
                     <p class="inline-notice" id="rerunFeedback" role="status" hidden></p>
                     {% endif %}
                 </section>
 
                 <section class="capture-management" aria-labelledby="captureManagementHeading">
-                    <div class="section-heading compact-heading"><div><p class="eyebrow">Organization</p><h2 id="captureManagementHeading">Manage capture</h2></div></div>
+                    <div class="section-heading compact-heading"><div><p class="eyebrow">Organization</p><h2 id="captureManagementHeading">Manage version</h2></div></div>
                     <div class="capture-management-grid">
                         <form id="moveCaptureForm" class="capture-management-card" data-collection="{{ capture.collection }}" data-filename="{{ capture.archive_filename }}">
-                            <div><strong>Change collection</strong><p>Move this WACZ and its capture record without changing its history.</p></div>
+                            <div><strong>Change collection</strong><p>Move this WACZ and its version record without changing its history.</p></div>
                             <label class="field-block compact" for="captureCollectionInput"><span>Collection</span><input id="captureCollectionInput" name="collection" value="{{ capture.collection }}" list="captureCollections" required {% if not capture.archive_filename %}disabled{% endif %}></label>
                             <datalist id="captureCollections"></datalist>
-                            <button class="button button-secondary" type="submit" {% if not capture.archive_filename %}disabled{% endif %}>Move capture</button>
+                            <button class="button button-secondary" type="submit" {% if not capture.archive_filename %}disabled{% endif %}>Move version</button>
                         </form>
                         <div class="capture-management-card">
-                            <div><strong>Useful actions</strong><p>Share this record or return to its original website.</p></div>
+                            <div><strong>Useful actions</strong><p>Share this version or return to its original site.</p></div>
                             <div class="capture-utility-actions">
-                                <button class="button button-secondary" id="copyCaptureLink" type="button">Copy record link</button>
+                                <button class="button button-secondary" id="copyCaptureLink" type="button">Copy version link</button>
                                 {% if capture.seed_url %}<a class="button button-quiet" href="{{ capture.seed_url }}" target="_blank" rel="noopener noreferrer">Open original site</a>{% endif %}
                             </div>
                         </div>
                     </div>
                     <div class="capture-danger-zone">
-                        <div><strong>Delete this capture</strong><p>Permanently removes this version, its WACZ archive, and local crawl files. Other versions are not affected.</p></div>
-                        <button class="button button-danger" id="deleteCapture" type="button" {% if capture.status in ["queued", "running", "uploading"] %}disabled{% endif %}>Delete capture…</button>
+                        <div><strong>Delete this version</strong><p>Permanently removes this version, its WACZ archive, and local crawl files. Other versions are not affected.</p></div>
+                        <button class="button button-danger" id="deleteCapture" type="button" {% if capture.status in ["queued", "running", "uploading"] %}disabled{% endif %}>Delete version…</button>
                     </div>
                     <p class="inline-notice" id="managementFeedback" role="status" hidden></p>
                 </section>
             </article>
 
             <aside class="capture-history" aria-labelledby="historyHeading">
-                <p class="eyebrow">Capture timeline</p>
+                <p class="eyebrow">Version history</p>
                 <h2 id="historyHeading">{{ history|length }} version{% if history|length != 1 %}s{% endif %}</h2>
-                {% if history|length > 1 %}<p class="timeline-intro">Compare every crawl of this URL. The newest record is shown first.</p>{% endif %}
+                {% if history|length > 1 %}<p class="timeline-intro">Compare every version of this site. The newest record is shown first.</p>{% endif %}
                 <ol class="timeline-list">
                     {% for item in history %}
                     <li class="timeline-item {% if item.job_id == capture.job_id %}is-current{% endif %}">
@@ -110,7 +110,7 @@
             </aside>
         </div>
     </main>
-    <footer class="site-footer"><span>WebVault</span><span>Complete capture history</span></footer>
+    <footer class="site-footer"><span>WebVault</span><span>Complete version history</span></footer>
 </div>
 {% endblock %}
 

@@ -59,14 +59,21 @@ def wacz_contains_url(path: Path, target_url: str):
     return False
 
 
-def get_s3_client():
+def get_s3_client(timeout_seconds: float | None = None):
+    config_options: dict[str, Any] = {"s3": {"addressing_style": "path"}}
+    if timeout_seconds is not None:
+        config_options.update(
+            connect_timeout=timeout_seconds,
+            read_timeout=timeout_seconds,
+            retries={"total_max_attempts": 1, "mode": "standard"},
+        )
     return boto3.client(
         "s3",
         endpoint_url=GARAGE_ENDPOINT,
         aws_access_key_id=GARAGE_ACCESS_KEY,
         aws_secret_access_key=GARAGE_SECRET_KEY,
         region_name="garage",
-        config=Config(s3={"addressing_style": "path"}),
+        config=Config(**config_options),
     )
 
 

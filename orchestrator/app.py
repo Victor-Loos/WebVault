@@ -40,10 +40,10 @@ from webvault.routers.profiles import router as profiles_router
 from webvault.routers.stats import router as stats_router
 from webvault.state import job_store, session_store
 from webvault.storage import (
-    get_archive_size,
-    get_archive_version_token,
     extract_search_documents,
     find_local_wacz,
+    get_archive_size,
+    get_archive_version_token,
     get_collection_payloads,
     get_s3_client,
     list_all_wacz_keys,
@@ -485,31 +485,35 @@ def delete_file(collection: str, filename: str) -> dict[str, Any]:
 
 def absolute_route_url(request: Request, route_name: str, **path_params: str) -> str:
     absolute = str(request.url_for(route_name, **path_params))
-    forwarded_proto = request.headers.get("x-forwarded-proto")
-    if forwarded_proto:
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip().lower()
+    if forwarded_proto in {"http", "https"}:
         parts = urlsplit(absolute)
-        absolute = parts._replace(scheme=forwarded_proto.split(",")[0].strip()).geturl()
+        absolute = parts._replace(scheme=forwarded_proto).geturl()
     return absolute
 
 
-def replay_initial_url(collection: str, filename: str) -> str:
+def _find_replay_job(collection: str, filename: str) -> dict[str, Any] | None:
     for job in job_store.load_all().values():
-        if job.get("collection") != collection or job.get("archive_filename") != filename:
-            continue
-        seed = str(job.get("primary_seed") or "").strip()
-        if not seed:
-            metadata = job.get("archive_metadata")
-            if isinstance(metadata, dict):
-                seed = str(metadata.get("seed_url") or "").strip()
-        if not seed:
-            crawl_request = job.get("crawl_request")
-            if isinstance(crawl_request, dict):
-                seeds = crawl_request.get("seeds")
-                if isinstance(seeds, list) and seeds:
-                    seed = str(seeds[0]).strip()
-        if seed.startswith(("http://", "https://")):
-            return seed
-    return ""
+        if job.get("collection") == collection and job.get("archive_filename") == filename:
+            return job
+    return None
+
+
+def _replay_initial_url(job: dict[str, Any] | None) -> str:
+    if not job:
+        return ""
+    seed = str(job.get("primary_seed") or "").strip()
+    if not seed:
+        crawl_request = job.get("crawl_request")
+        if isinstance(crawl_request, dict):
+            seeds = crawl_request.get("seeds")
+            if isinstance(seeds, list) and seeds:
+                seed = str(seeds[0]).strip()
+    return seed if seed.startswith(("http://", "https://")) else ""
+
+
+def replay_initial_url(collection: str, filename: str) -> str:
+    return _replay_initial_url(_find_replay_job(collection, filename))
 
 
 @app.get("/replay/{collection}/{filename}", response_class=HTMLResponse)
@@ -527,11 +531,12 @@ async def replay_archive(collection: str, filename: str, request: Request) -> HT
         logger.warning(
             "Could not build replay version token for %s/%s: %s", collection, filename, exc
         )
-    # Use the capture's known seed when available so ReplayWeb opens the site
+    # Use the version's known seed when available so ReplayWeb opens the site
     # directly. Legacy/imported WACZ files without stored metadata still fall
     # back to ReplayWeb's captured-pages index without downloading the archive
     # just to inspect it here.
-    initial_url = replay_initial_url(collection, filename)
+    replay_job = _find_replay_job(collection, filename)
+    initial_url = _replay_initial_url(replay_job)
     return mark_uncached(
         render_replay_wrapper_page(
             source=source_url,
@@ -540,6 +545,11 @@ async def replay_archive(collection: str, filename: str, request: Request) -> HT
             back_label=friendly_title(collection),
             download_href=f"/download/{quote(collection)}/{quote(filename)}",
             initial_url=initial_url,
+            capture_href=(
+                f"/captures/{quote(str(replay_job['job_id']), safe='')}"
+                if replay_job and replay_job.get("job_id")
+                else ""
+            ),
         )
     )
 

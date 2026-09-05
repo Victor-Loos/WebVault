@@ -85,6 +85,7 @@ def test_route_manifest_preserves_public_contract():
     expected = {
         ("GET", "/"),
         ("GET", "/api/archives"),
+        ("GET", "/api/health"),
         ("GET", "/api/jobs"),
         ("GET", "/api/collections"),
         ("POST", "/api/crawl"),
@@ -143,8 +144,16 @@ def test_absolute_route_url_honors_forwarded_proto():
     forwarded = app.absolute_route_url(
         make_request("https"), "replay_wacz", collection="docs", filename="a.wacz"
     )
+    forwarded_chain = app.absolute_route_url(
+        make_request("HTTPS, http"), "replay_wacz", collection="docs", filename="a.wacz"
+    )
+    invalid = app.absolute_route_url(
+        make_request("javascript"), "replay_wacz", collection="docs", filename="a.wacz"
+    )
     assert plain.startswith("http://testserver/replay-wacz/docs/a.wacz")
     assert forwarded.startswith("https://testserver/replay-wacz/docs/a.wacz")
+    assert forwarded_chain.startswith("https://testserver/replay-wacz/docs/a.wacz")
+    assert invalid.startswith("http://testserver/replay-wacz/docs/a.wacz")
 
 
 def test_delete_capture_removes_archive_and_record(monkeypatch, tmp_path):
@@ -194,6 +203,30 @@ def test_replay_uses_capture_seed_as_initial_url(monkeypatch):
     assert app.replay_initial_url("docs", "legacy.wacz") == ""
 
 
+def test_replay_title_links_to_version_information(monkeypatch):
+    monkeypatch.setattr(
+        app.job_store,
+        "load_all",
+        lambda: {
+            "capture-1": {
+                "job_id": "capture-1",
+                "collection": "docs",
+                "archive_filename": "docs.wacz",
+                "primary_seed": "https://example.com/docs",
+            }
+        },
+    )
+    monkeypatch.setattr(app, "get_archive_version_token", lambda *_args: "version")
+
+    response = TestClient(app.app).get("/replay/docs/docs.wacz")
+
+    assert response.status_code == 200
+    assert (
+        'class="replay-title-link" href="/captures/capture-1" '
+        'aria-label="View version information: Docs">Docs</a>' in response.text
+    )
+
+
 def test_cookie_sessions_require_csrf_for_mutations(monkeypatch):
     monkeypatch.setattr(auth_routes, "AUTH_ENABLED", True)
     monkeypatch.setattr(auth_routes, "WEBVAULT_USERNAME", "admin")
@@ -228,6 +261,9 @@ def test_home_page_has_unique_ids_and_no_inline_click_handlers():
     assert "onclick=" not in html
     assert 'id="collectionSuggestions"' in html
     assert 'id="actionDialog"' in html
+    assert 'id="systemState" href="/stats"' in html
+    assert ">Sites</button>" in html
+    assert "Individual crawls" not in html
 
 
 def test_collection_template_escapes_archive_metadata():
@@ -248,6 +284,36 @@ def test_collection_template_escapes_archive_metadata():
     assert "Unsafe &lt;script&gt;" in html
     assert "/static/collection.js" in html
     assert "capture%20file.wacz" in html
+    assert 'class="collection-card-link" href="/replay/research/capture%20file.wacz"' in html
+    assert ">Replay capture</a>" not in html
+    assert ">Capture details</a>" not in html
+
+
+def test_collection_capture_information_opens_capture_details_without_redundant_button():
+    html = app.render_collection_page(
+        "login",
+        [
+            {
+                "title": "Login portal",
+                "description": "Authenticated capture",
+                "name": "login.wacz",
+                "size": "24 KB",
+                "seed_url": "https://example.com/login",
+                "job_id": "capture-1",
+                "version_count": 1,
+            }
+        ],
+        can_rerun=True,
+    ).body.decode()
+
+    assert (
+        'class="collection-card-link" href="/captures/capture-1" '
+        'aria-label="View latest version: Login portal"' in html
+    )
+    assert ">Capture details</a>" not in html
+    assert 'class="button button-quiet" href="/replay/login/login.wacz">Replay</a>' in html
+    assert ">New version</button>" in html
+    assert "Capture new version" not in html
 
 
 def test_crawl_budget_defaults_are_bounded():

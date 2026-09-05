@@ -23,10 +23,10 @@
                 Settings
             </button>
         </nav>
-        <div class="system-state" title="WebVault is connected">
+        <a class="system-state is-checking" id="systemState" href="/stats" aria-label="System status: Checking services" title="Open system health">
             <span class="status-dot" aria-hidden="true"></span>
-            <span>Ready</span>
-        </div>
+            <span id="systemStateLabel">Checking services</span>
+        </a>
     </header>
 
     <main id="main-content">
@@ -43,7 +43,7 @@
                         <dd id="statCollections">—</dd>
                     </div>
                     <div>
-                        <dt>Captures</dt>
+                        <dt>Versions</dt>
                         <dd id="statFiles">—</dd>
                     </div>
                     <div>
@@ -78,16 +78,15 @@
                             <p class="previous-capture-note" id="previousCaptureNote" role="status" hidden></p>
                         </div>
 
-                        <div class="field-block">
-                            <label for="collection">Collection</label>
-                            <input id="collection" name="collection" type="text" list="collectionSuggestions" placeholder="Unsorted captures" autocomplete="off">
-                            <datalist id="collectionSuggestions"></datalist>
-                            <p class="field-hint" id="collectionHint">Leave blank to place this capture in “Not defined”.</p>
-                        </div>
-
-                        <div class="option-grid">
+                        <div class="capture-essentials">
                             <div class="field-block compact">
-                                <label for="scopeType">Capture scope</label>
+                                <label for="collection">Save to</label>
+                                <input id="collection" name="collection" type="text" list="collectionSuggestions" placeholder="Unsorted captures" autocomplete="off">
+                                <datalist id="collectionSuggestions"></datalist>
+                                <p class="field-hint" id="collectionHint">Optional collection</p>
+                            </div>
+                            <div class="field-block compact">
+                                <label for="scopeType">Follow links across</label>
                                 <select id="scopeType" name="scopeType">
                                     <option value="prefix">This path</option>
                                     <option value="host">Entire host</option>
@@ -96,26 +95,19 @@
                                     <option value="page-spa">Single-page app</option>
                                     <option value="any">Follow anywhere</option>
                                 </select>
+                                <p class="field-hint">Controls which discovered URLs are eligible</p>
                             </div>
                             <div class="field-block compact">
-                                <label for="depth">Link depth</label>
+                                <label for="depth">Explore up to</label>
                                 <select id="depth" name="depth">
                                     <option value="0">Seed only</option>
-                                    <option value="1" selected>1 level</option>
-                                    <option value="2">2 levels</option>
-                                    <option value="3">3 levels</option>
-                                    <option value="4">4 levels</option>
-                                    <option value="5">5 levels</option>
+                                    <option value="1" selected>1 link away</option>
+                                    <option value="2">2 links away</option>
+                                    <option value="3">3 links away</option>
+                                    <option value="4">4 links away</option>
+                                    <option value="5">5 links away</option>
                                 </select>
-                            </div>
-                            <div class="field-block compact">
-                                <label for="workers">Parallel tabs</label>
-                                <select id="workers" name="workers">
-                                    <option value="1" selected>1 tab</option>
-                                    <option value="2">2 tabs</option>
-                                    <option value="3">3 tabs</option>
-                                    <option value="4">4 tabs</option>
-                                </select>
+                                <p class="field-hint">Start small; deeper captures grow quickly</p>
                             </div>
                         </div>
 
@@ -125,7 +117,7 @@
                                 <span class="summary-hint">Limits, page readiness, and browser behavior</span>
                             </summary>
                             <div class="advanced-body">
-                                <div class="option-grid">
+                                <div class="option-grid option-grid-four">
                                     <div class="field-block compact">
                                         <label for="pageLimit">Page limit</label>
                                         <input id="pageLimit" name="pageLimit" type="number" min="1" max="100000" value="1000" inputmode="numeric">
@@ -148,8 +140,17 @@
                                             <option value="networkidle2">Mostly quiet</option>
                                         </select>
                                     </div>
+                                    <div class="field-block compact">
+                                        <label for="workers">Parallel tabs</label>
+                                        <select id="workers" name="workers">
+                                            <option value="1" selected>1 tab</option>
+                                            <option value="2">2 tabs</option>
+                                            <option value="3">3 tabs</option>
+                                            <option value="4">4 tabs</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="option-grid">
+                                <div class="option-grid option-grid-two">
                                     <div class="field-block compact">
                                         <label for="includeRules">Include URL rules</label>
                                         <textarea id="includeRules" name="includeRules" rows="4" placeholder="^https://example\\.com/docs/"></textarea>
@@ -161,7 +162,7 @@
                                         <p class="field-hint">Matching discovered URLs will not be captured.</p>
                                     </div>
                                 </div>
-                                <div class="option-grid">
+                                <div class="option-grid option-grid-two">
                                     <div class="field-block compact">
                                         <label for="scheduleInterval">Repeat capture</label>
                                         <select id="scheduleInterval" name="scheduleInterval">
@@ -209,7 +210,7 @@
                         </details>
 
                         <div class="form-actions">
-                            <p>Your crawl runs privately inside this WebVault.</p>
+                            <p>Your capture runs privately inside this WebVault.</p>
                             <button class="button button-primary button-large" id="crawlSubmit" type="submit">
                                 <span>Begin capture</span><span aria-hidden="true">→</span>
                             </button>
@@ -229,7 +230,7 @@
                         <div class="empty-state compact-empty">
                             <span class="empty-mark" aria-hidden="true">◎</span>
                             <strong>No captures yet</strong>
-                            <p>Your latest crawl progress will appear here.</p>
+                            <p>Your latest capture progress will appear here.</p>
                         </div>
                     </div>
                 </aside>
@@ -241,8 +242,8 @@
                 <div>
                     <span class="section-number">02</span>
                     <p class="eyebrow">Archive library</p>
-                    <h2 id="libraryHeading">Everything you have preserved</h2>
-                    <p>Browse collections, replay captures, or begin a fresh update.</p>
+                    <h2 id="libraryHeading">Collections, sites, and versions</h2>
+                    <p>Open a collection, choose a site, then replay or manage a saved version.</p>
                 </div>
                 <div class="library-search-row">
                     <label class="search-field library-search-field" for="librarySearch">
@@ -260,20 +261,20 @@
                     <span class="library-filter-label">Show</span>
                     <div class="choice-pills" data-control="libraryView">
                         <button class="choice-pill is-selected" type="button" data-value="collections" aria-pressed="true">Collections</button>
-                        <button class="choice-pill" type="button" data-value="crawls" aria-pressed="false">Individual crawls</button>
+                        <button class="choice-pill" type="button" data-value="crawls" aria-pressed="false">Sites</button>
                     </div>
                 </div>
-                <div class="library-filter-group library-search-scope">
-                    <span class="library-filter-label">Search in</span>
+                <details class="library-filter-group library-search-scope">
+                    <summary>Search fields</summary>
                     <div class="choice-pills" data-control="librarySearchField">
                         <button class="choice-pill is-selected" type="button" data-value="all" aria-pressed="true">Everything</button>
                         <button class="choice-pill" type="button" data-value="collection" aria-pressed="false">Collection names</button>
-                        <button class="choice-pill" type="button" data-value="crawl" aria-pressed="false">Web addresses</button>
+                        <button class="choice-pill" type="button" data-value="crawl" aria-pressed="false">Site addresses</button>
                         <button class="choice-pill" type="button" data-value="title" aria-pressed="false">Titles</button>
                         <button class="choice-pill" type="button" data-value="content" aria-pressed="false">Page text</button>
                         <button class="choice-pill" type="button" data-value="date" aria-pressed="false">Dates</button>
                     </div>
-                </div>
+                </details>
                 <div class="library-filter-group">
                     <span class="library-filter-label">Order</span>
                     <div class="choice-pills" data-control="librarySort">

@@ -2,11 +2,11 @@
 
 {% block body %}
 <div class="app-shell">
-    <header class="site-header compact-site-header"><a class="wordmark" href="/#capture" aria-label="WebVault capture home"><span class="wordmark-icon"><img src="/img/icon.svg" alt=""></span><span><strong>WebVault</strong><small>Interactive crawl</small></span></a><nav class="page-nav"><a class="button button-secondary" href="/live/">Watch frames</a></nav></header>
+    <header class="site-header compact-site-header"><a class="wordmark" href="/#capture" aria-label="WebVault capture home"><span class="wordmark-icon"><img src="/img/icon.svg" alt=""></span><span><strong>WebVault</strong><small>Interactive capture</small></span></a><nav class="page-nav"><a class="button button-secondary" href="/live/">Watch frames</a></nav></header>
     <main id="main-content" class="live-control-workspace">
-        <p class="eyebrow">Local browser control</p><h1>Interact with the running crawl</h1>
-        <p class="live-control-intro">Choose a Browsertrix tab to open Chromium DevTools. You can click, type, complete a login, or dismiss a dialog while the crawl is running. Browsertrix may navigate the tab as its queue advances.</p>
-        <div class="profile-security-note"><strong>Local access only</strong><p>DevTools grants complete control of the crawl browser and is exposed only on loopback port 9222. Close it when finished.</p></div>
+        <p class="eyebrow">Local browser control</p><h1>Interact with the running capture</h1>
+        <p class="live-control-intro">Choose a Browsertrix tab to open Chromium DevTools. You can click, type, complete a login, or dismiss a dialog while the capture is running. Browsertrix may navigate the tab as its queue advances.</p>
+        <div class="profile-security-note"><strong>Local access only</strong><p>DevTools grants complete control of the capture browser and is exposed only on loopback port 9222. Close it when finished.</p></div>
         <div class="live-targets" id="liveTargets"><div class="loading-line"></div><p>Looking for interactive tabs…</p></div>
         <button class="button button-secondary" id="refreshTargets" type="button">Refresh tabs</button>
     </main>

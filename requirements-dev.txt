@@ -1,4 +1,5 @@
 -r orchestrator/requirements.txt
 pytest>=8,<10
+httpx2>=2,<3
 ruff>=0.9,<1
 pyright>=1.1,<2

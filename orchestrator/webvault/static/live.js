@@ -24,8 +24,8 @@
                 ? jobs.find((item) => item.job_id === requestedJob)
                 : jobs.find((item) => ["queued", "running", "uploading"].includes(item.status));
             if (!job) {
-                $("#liveStatus").textContent = "No active crawl";
-                $("#liveMessage").textContent = "No running capture was found. The browser view may remain empty until another crawl starts.";
+                $("#liveStatus").textContent = "No active capture";
+                $("#liveMessage").textContent = "No running capture was found. The browser view may remain empty until another capture starts.";
                 return;
             }
             $("#liveInfoLink").href = `/captures/${encodeURIComponent(job.job_id)}`;

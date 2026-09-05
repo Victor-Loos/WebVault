@@ -34,6 +34,27 @@
         return total ? Math.round((used / total) * 100) : null;
     }
 
+    function serviceStateClass(service) {
+        if (service.status === "available" || service.status === "healthy") {
+            return service.state === "busy" ? "is-busy" : "is-ready";
+        }
+        return "is-unavailable";
+    }
+
+    function renderServiceHealth(payload) {
+        const services = [
+            ["Garage", payload.archive],
+            ["Worker", payload.worker],
+            ["Browsertrix", payload.browsertrix],
+        ];
+        $("#serviceHealthList").innerHTML = services.map(([name, service]) => `
+            <div class="service-health-item ${serviceStateClass(service)}">
+                <span class="status-dot" aria-hidden="true"></span>
+                <span><strong>${name}</strong><small>${escapeHtml(service.state)} · ${escapeHtml(service.detail)}</small></span>
+            </div>
+        `).join("");
+    }
+
     function scheduleRefresh() {
         window.clearTimeout(refreshTimer);
         refreshTimer = window.setTimeout(() => {
@@ -71,11 +92,12 @@
             const capacity = payload.archive.capacity_bytes;
             const remaining = payload.archive.remaining_bytes;
             $("#statArchiveDetail").textContent = capacity
-                ? `${bytes(remaining)} remaining of ${bytes(capacity)} · ${payload.archive.files} captures`
-                : `${payload.archive.files} captures in ${payload.archive.collections} collections`;
+                ? `${bytes(remaining)} remaining of ${bytes(capacity)} · ${payload.archive.files} versions`
+                : `${payload.archive.files} versions in ${payload.archive.collections} collections`;
             $("#statJobTotal").textContent = String(payload.jobs.total);
             const workerAge = payload.worker.heartbeat_age_seconds === null ? "no heartbeat" : `${payload.worker.heartbeat_age_seconds}s ago`;
             $("#statJobDetail").textContent = `Worker ${payload.worker.status} · ${payload.worker.state} · ${workerAge}`;
+            renderServiceHealth(payload.services);
 
             const statuses = Object.entries(payload.jobs.statuses).sort(([left], [right]) => left.localeCompare(right));
             $("#jobStatusList").innerHTML = statuses.length
@@ -84,6 +106,7 @@
             $("#statsUpdated").textContent = `Updated ${new Intl.DateTimeFormat(undefined, { timeStyle: "medium", hour12: false }).format(new Date())}`;
         } catch (error) {
             $("#statsUpdated").textContent = error.message;
+            $("#serviceHealthList").innerHTML = `<span class="quiet-badge">${escapeHtml(error.message)}</span>`;
         } finally {
             button.disabled = false;
             refreshing = false;

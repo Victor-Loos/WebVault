@@ -86,7 +86,7 @@
             return;
         }
         if (target === currentCollection) {
-            toast("This capture is already in that collection.");
+            toast("This version is already in that collection.");
             closeDialog();
             return;
         }
@@ -103,7 +103,7 @@
             toast(error.message, "error");
         } finally {
             moveButton.disabled = false;
-            moveButton.textContent = "Move capture";
+            moveButton.textContent = "Move version";
         }
     });
 
@@ -118,7 +118,7 @@
         deleteButton.textContent = "Deleting…";
         try {
             await api(`/api/files/${encodeURIComponent(currentCollection)}/${encodeURIComponent(currentFilename)}`, { method: "DELETE" });
-            toast("Capture permanently deleted.");
+            toast("Version permanently deleted.");
             closeDialog();
             window.setTimeout(() => window.location.reload(), 500);
         } catch (error) {
@@ -139,7 +139,7 @@
             } catch (error) {
                 toast(error.message, "error");
                 updateCollectionButton.disabled = false;
-                updateCollectionButton.textContent = "Capture new version";
+                updateCollectionButton.textContent = "New version";
             }
         });
     }

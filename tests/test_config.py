@@ -33,7 +33,7 @@ def test_auth_accepts_explicit_loopback_opt_out_or_complete_credentials():
 def test_auth_is_required_by_default(monkeypatch):
     monkeypatch.delenv("WEBVAULT_ALLOW_UNAUTHENTICATED", raising=False)
     with pytest.raises(ValidationError, match="Authentication is required by default"):
-        Settings(_env_file=None)
+        Settings(webvault_allow_unauthenticated=False)
 
 
 def test_unauthenticated_non_loopback_binding_is_rejected():

@@ -126,6 +126,7 @@ def render_replay_wrapper_page(
     back_href: str,
     back_label: str,
     download_href: str,
+    capture_href: str = "",
     initial_url: str = "",
 ):
     return render_template(
@@ -136,6 +137,7 @@ def render_replay_wrapper_page(
         back_href=back_href,
         back_label=back_label,
         download_href=download_href,
+        capture_href=capture_href,
         source=source,
         initial_url=initial_url,
     )

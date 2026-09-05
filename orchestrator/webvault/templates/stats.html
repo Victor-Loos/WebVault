@@ -18,18 +18,26 @@
             <div>
                 <p class="eyebrow">System overview</p>
                 <h1>Server statistics</h1>
-                <p>Resource, archive, and crawl activity for this WebVault instance.</p>
+                <p>Resource, archive, and capture activity for this WebVault instance.</p>
             </div>
             <div><p class="stats-updated" id="statsUpdated" role="status">Loading current statistics…</p><p class="stats-scope">Resource measurements cover the WebVault application container, not the Docker host or other services.</p></div>
         </header>
+
+        <section class="service-health" aria-labelledby="serviceHealthHeading">
+            <div>
+                <p class="eyebrow">Service health</p>
+                <h2 id="serviceHealthHeading">Capture and archive services</h2>
+            </div>
+            <div class="service-health-list" id="serviceHealthList" aria-live="polite"><span class="quiet-badge">Checking services</span></div>
+        </section>
 
         <div class="stats-grid" id="statsGrid" aria-live="polite">
             <section class="stat-panel"><span class="stat-label">Process uptime</span><strong id="statUptime">—</strong><small>FastAPI service</small></section>
             <section class="stat-panel"><span class="stat-label">Load average</span><strong id="statLoad">—</strong><small id="statCpu">Across available CPUs</small></section>
             <section class="stat-panel"><span class="stat-label">Memory</span><strong id="statMemory">—</strong><small id="statMemoryDetail">Container usage</small></section>
-            <section class="stat-panel"><span class="stat-label">Crawl storage</span><strong id="statDisk">—</strong><small id="statDiskDetail">Local working volume</small></section>
+            <section class="stat-panel"><span class="stat-label">Capture storage</span><strong id="statDisk">—</strong><small id="statDiskDetail">Local working volume</small></section>
             <section class="stat-panel"><span class="stat-label">Archive storage</span><strong id="statArchive">—</strong><small id="statArchiveDetail">Garage object storage</small></section>
-            <section class="stat-panel"><span class="stat-label">Crawl jobs</span><strong id="statJobTotal">—</strong><small id="statJobDetail">SQLite history</small></section>
+            <section class="stat-panel"><span class="stat-label">Capture jobs</span><strong id="statJobTotal">—</strong><small id="statJobDetail">SQLite history</small></section>
         </div>
 
         <section class="status-breakdown" aria-labelledby="jobStatusHeading">

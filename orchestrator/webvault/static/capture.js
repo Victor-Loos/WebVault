@@ -64,15 +64,15 @@
                 headers: { "X-CSRF-Token": csrfToken() },
             });
             const payload = await response.json();
-            if (!response.ok) throw new Error(payload.detail || "Could not queue this capture.");
+            if (!response.ok) throw new Error(payload.detail || "Could not queue this version.");
             feedback.hidden = false;
-            feedback.textContent = "New capture queued. Opening its live record…";
+            feedback.textContent = "New version queued. Opening its record…";
             window.setTimeout(() => { window.location.href = `/captures/${encodeURIComponent(payload.job_id)}`; }, 700);
         } catch (error) {
             feedback.hidden = false;
             feedback.textContent = error.message;
             button.disabled = false;
-            button.textContent = "Run again with same settings";
+            button.textContent = "New version";
         }
     });
 
@@ -122,14 +122,14 @@
         } catch (error) {
             showManagementFeedback(error.message);
             button.disabled = false;
-            button.textContent = "Move capture";
+            button.textContent = "Move version";
         }
     });
 
     $("#copyCaptureLink")?.addEventListener("click", async (event) => {
         try {
             await navigator.clipboard.writeText(window.location.href);
-            event.currentTarget.textContent = "Link copied";
+            event.currentTarget.textContent = "Version link copied";
         } catch (_error) {
             showManagementFeedback("Could not access the clipboard. Copy the address from your browser.");
         }
@@ -152,7 +152,7 @@
         } catch (error) {
             showManagementFeedback(error.message);
             button.disabled = false;
-            button.textContent = "Delete capture…";
+            button.textContent = "Delete version…";
         }
     });
 

@@ -11,7 +11,7 @@
             <a href="/#library">Library</a><span aria-hidden="true">/</span><span>{{ collection_title }}</span>
         </nav>
         {% if can_rerun %}
-        <button class="button button-primary" id="updateCollectionButton" type="button" data-collection="{{ collection }}">Capture new version</button>
+        <button class="button button-primary" id="updateCollectionButton" type="button" data-collection="{{ collection }}">New version</button>
         {% else %}
         <a class="button button-secondary" href="/#capture">New capture</a>
         {% endif %}
@@ -22,11 +22,11 @@
             <div>
                 <p class="eyebrow">Archive collection</p>
                 <h1>{{ collection_title }}</h1>
-                <p>Replay a preserved moment, download its portable WACZ file, or move it into another collection.</p>
+                <p>Choose a site, replay or download a saved version, or move it to another collection.</p>
             </div>
             <div class="collection-total">
                 <strong>{{ files | length }}</strong>
-                <span>capture{% if files | length != 1 %}s{% endif %}</span>
+                <span>version{% if files | length != 1 %}s{% endif %}</span>
             </div>
         </section>
 
@@ -34,28 +34,30 @@
             <article class="workspace-panel collection-workspace">
                 <div class="library-header collection-tools">
                     <div>
-                        <p class="eyebrow">Crawls in this collection</p>
-                        <h2 id="filesHeading">Preserved websites</h2>
+                        <p class="eyebrow">Sites in this collection</p>
+                        <h2 id="filesHeading">Preserved sites</h2>
                     </div>
                     {% if files %}
                     <label class="search-field" for="fileSearch">
-                        <span class="visually-hidden">Filter captures</span>
+                        <span class="visually-hidden">Filter sites</span>
                         <span aria-hidden="true">⌕</span>
-                        <input id="fileSearch" type="search" placeholder="Filter crawls" autocomplete="off">
+                        <input id="fileSearch" type="search" placeholder="Filter sites" autocomplete="off">
                     </label>
                     {% endif %}
                 </div>
                 <div class="collection-grid collection-crawl-grid" id="fileList">
                     {% for file in unique_files %}
                     <article class="collection-card" data-search="{{ file.title }} {{ file.description }} {{ file.name }} {{ file.seed_url }}">
-                        <span class="collection-card-index">{{ "%02d" | format(loop.index) }}</span>
-                        <p class="eyebrow">{{ file.version_count }} version{% if file.version_count != 1 %}s{% endif %}</p>
-                        <h3>{{ file.title }}</h3>
-                        <p class="collection-card-source">{{ file.seed_url or file.name }}</p>
-                        <p class="collection-card-meta">{{ file.description or "Capture metadata unavailable" }} · {{ file.size }}</p>
+                        <a class="collection-card-link" href="{% if file.job_id %}/captures/{{ file.job_id | urlencode }}{% else %}/replay/{{ collection | urlencode }}/{{ file.name | urlencode }}{% endif %}" aria-label="{% if file.job_id %}View latest version{% else %}Replay version{% endif %}: {{ file.title }}">
+                            <span class="collection-card-index">{{ "%02d" | format(loop.index) }}</span>
+                            <span class="collection-card-arrow" aria-hidden="true">↗</span>
+                            <p class="eyebrow">{{ file.version_count }} version{% if file.version_count != 1 %}s{% endif %}</p>
+                            <h3>{{ file.title }}</h3>
+                            <p class="collection-card-source">{{ file.seed_url or file.name }}</p>
+                            <p class="collection-card-meta">{{ file.description or "Version metadata unavailable" }} · {{ file.size }}</p>
+                        </a>
                         <div class="collection-card-actions">
-                            {% if file.job_id %}<a class="button button-primary" href="/captures/{{ file.job_id | urlencode }}">Capture details</a>{% else %}<a class="button button-primary" href="/replay/{{ collection | urlencode }}/{{ file.name | urlencode }}">Replay capture</a>{% endif %}
-                            <a class="button button-secondary" href="/replay/{{ collection | urlencode }}/{{ file.name | urlencode }}">Replay</a>
+                            {% if file.job_id %}<a class="button button-quiet" href="/replay/{{ collection | urlencode }}/{{ file.name | urlencode }}">Replay</a>{% endif %}
                             <a class="button button-quiet" href="/download/{{ collection | urlencode }}/{{ file.name | urlencode }}">Download</a>
                             <button class="button button-quiet" type="button" data-file-action="manage" data-collection="{{ collection }}" data-filename="{{ file.name }}">Manage</button>
                         </div>
@@ -64,17 +66,17 @@
                     <div class="empty-state large-empty">
                         <span class="empty-mark" aria-hidden="true">◇</span>
                         <strong>This collection is empty</strong>
-                        <p>Start a new capture from the dashboard to add its first preserved page.</p>
+                        <p>Start a new capture from the dashboard to add its first site and version.</p>
                         <a class="button button-primary" href="/#capture">Start a capture</a>
                     </div>
                     {% endfor %}
                 </div>
-                <div class="empty-state" id="fileSearchEmpty" hidden><strong>No matching captures</strong><p>Try a different search phrase.</p></div>
+                <div class="empty-state" id="fileSearchEmpty" hidden><strong>No matching sites</strong><p>Try a different search phrase.</p></div>
             </article>
 
             <aside class="capture-history collection-history" aria-labelledby="collectionHistoryHeading">
-                <p class="eyebrow">Collection timeline</p>
-                <h2 id="collectionHistoryHeading">{{ files|length }} capture{% if files|length != 1 %}s{% endif %}</h2>
+                <p class="eyebrow">Version history</p>
+                <h2 id="collectionHistoryHeading">{{ files|length }} version{% if files|length != 1 %}s{% endif %}</h2>
                 <ol class="timeline-list">
                     {% for file in files %}
                     <li class="timeline-item {% if loop.first %}is-current{% endif %}" data-search="{{ file.title }} {{ file.name }}">
@@ -85,10 +87,11 @@
                                 {% if loop.first %}<span class="timeline-latest">Latest</span>{% endif %}
                             </div>
                             <small>{{ file.description or file.name }} · {{ file.size }}</small>
+                            {% if file.job_id %}
                             <div class="timeline-actions">
-                                {% if file.job_id %}<a href="/captures/{{ file.job_id | urlencode }}">Capture details</a>{% endif %}
                                 <a href="/replay/{{ collection | urlencode }}/{{ file.name | urlencode }}">Replay</a>
                             </div>
+                            {% endif %}
                         </div>
                     </li>
                     {% endfor %}
@@ -103,8 +106,8 @@
 <dialog class="action-dialog" id="fileDialog" aria-labelledby="fileDialogTitle">
     <form method="dialog" id="fileDialogForm">
         <button class="dialog-close" type="button" data-dialog-close aria-label="Close dialog">×</button>
-        <p class="eyebrow">Manage capture</p>
-        <h2 id="fileDialogTitle">Move or remove this file</h2>
+        <p class="eyebrow">Manage version</p>
+        <h2 id="fileDialogTitle">Move or remove this version</h2>
         <p class="dialog-filename" id="fileDialogName"></p>
         <div class="field-block">
             <label for="fileDestination">Move to collection</label>
@@ -115,7 +118,7 @@
             <button class="button button-danger-quiet" id="deleteFileButton" type="button">Delete permanently</button>
             <span></span>
             <button class="button button-quiet" type="button" data-dialog-close>Cancel</button>
-            <button class="button button-primary" id="moveFileButton" type="button">Move capture</button>
+            <button class="button button-primary" id="moveFileButton" type="button">Move version</button>
         </div>
     </form>
 </dialog>
